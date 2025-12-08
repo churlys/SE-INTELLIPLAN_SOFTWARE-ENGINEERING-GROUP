@@ -1,0 +1,403 @@
+:root{
+  --container-max: 1100px;
+  --muted: #6b7280;
+  --shadow: 0 8px 24px rgba(38,50,75,0.06);
+  --primary: #60a8ff;
+  --dark: #07102a;
+  --panel-bg: #ffffff;
+  --muted-bg: #f2f6f8;
+}
+
+/* --- base from previous version (keeps hero/header and utilities) --- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--dark);background:var(--muted-bg)}
+.container{max-width:var(--container-max);margin:0 auto;padding:24px}
+
+/* header */
+.site-header{
+  position:absolute;
+  left:0;
+  right:0;
+  top:18px;
+  z-index:20;
+}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:var(--container-max);margin:0 auto;padding:0 24px}
+.brand{display:flex;align-items:center;gap:18px}
+.brand .logo{height:36px; width:auto; display:inline-block; background:white; border-radius:9999px; padding:6px}
+.main-nav{display:flex;gap:18px;align-items:center;color:#24303f}
+.main-nav a{color: rgba(2,6,23,0.5); text-decoration:none; font-size:14px}
+.header-actions{display:flex;gap:8px;align-items:center}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid rgba(2,6,23,0.08);background:transparent;
+}
+.btn-primary{background: linear-gradient(180deg, var(--primary), #3f8fe6);color:#fff;border:none;box-shadow: 0 6px 18px rgba(96,168,255,0.14);}
+.btn-ghost{background:transparent}
+
+/* hero (kept from previous file) */
+.hero{
+  padding:44px 0;border-radius:0;margin:0;color:var(--dark);position:relative;overflow:hidden;min-height:100vh;display:flex;align-items:center;
+}
+.hero-inner{display:flex;gap:28px;align-items:center;padding:48px 24px;position:relative;z-index:3;width:100%;max-width:var(--container-max);margin:0 auto}
+.hero-copy{flex:0 0 48%;max-width:56%;min-width:280px;padding-left:8px}
+.hero-copy h1{font-size:48px;line-height:1.02;margin:0 0 18px;font-weight:800;color: #07102a;}
+.lead{color:var(--muted);font-size:15px;max-width:520px;margin-bottom:18px}
+.hero::after{content:"";position:absolute;inset:0;z-index:2;background: linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0.75));pointer-events:none;}
+.hero-art{flex:0 0 48%;max-width:520px;display:flex;align-items:center;justify-content:center;z-index:4}
+.bg-responsive{background-size:cover;background-position:center;background-repeat:no-repeat;display:block;width:100%;height:100%}
+
+/* --- Platform badges: precise sizes/positioning to match screenshot --- */
+.hero-ctas{display:flex;flex-direction:column;gap:12px}
+.cta-row{display:flex;align-items:center;gap:12px}
+.platforms{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-top:6px;
+  margin-left:2px;
+}
+.platform-badge{
+  height:60px;
+  width:auto;
+  display:inline-block;
+  object-fit:contain;
+  opacity:100%;
+  vertical-align:middle;
+}
+.panel-badge{
+  height:28px;
+  opacity:0.85;
+}
+.hero-support-text{margin-top:18px;font-size:12px;color:rgba(2,6,23,0.6)}
+
+/* --- New panel wrapper used to match screenshots: white rounded panels on muted background --- */
+.panel {
+  background: #ffffff;
+  border-radius:18px;
+  padding:40px;
+  box-shadow: 0 10px 30px rgba(12,34,63,0.04);
+  margin: 36px auto;
+  max-width: calc(var(--container-max) - 80px);
+}
+
+/* --- Features / Methods section (left image + right vertical timeline) --- */
+.features-panel .panel-title {
+  text-align:center;
+  font-weight:700;
+  font-size:20px;
+  margin-bottom:22px;
+}
+.features-panel .feature-layout {
+  display:flex;
+  gap:36px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+
+/* left artwork: a rounded blue card that holds the illustration */
+.feature-left {
+  flex:0 0 56%;
+  max-width:56%;
+  min-width:320px;
+}
+.feature-left .art-card{
+  background: linear-gradient(180deg,#5fc0ff,#3ea9ff);
+  border-radius:16px;
+  padding:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 16px 40px rgba(62,169,255,0.12);
+}
+.feature-left .art-card .bg-responsive{
+  border-radius:10px;
+  width:100%;
+  max-width:700px;
+  height:230px;
+  background-size:contain;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+
+/* right timeline content */
+.feature-right {
+  flex:0 0 36%;
+  max-width:36%;
+  min-width:260px;
+  position:relative;
+  padding-left:28px;
+}
+.feature-right .timeline {
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:28px;
+  padding-left:36px;
+}
+.feature-right .timeline::before{
+  content:"";
+  position:absolute;
+  left:18px;
+  top:14px;
+  bottom:14px;
+  width:4px;
+  background: linear-gradient(180deg,#bfeaff,#6ec7ff);
+  border-radius:4px;
+  opacity:0.9;
+}
+.feature-right .timeline-item{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+}
+.feature-right .dot{
+  width:28px;height:28px;border-radius:50%;background:#9ee2ff;flex:0 0 auto;border:6px solid rgba(255,255,255,0.7);box-shadow: 0 6px 18px rgba(62,169,255,0.08);margin-left:-36px;
+}
+.timeline-item .item-body h4{
+  margin:0 0 6px;font-size:15px;font-weight:700;
+  color:var(--dark);
+}
+.timeline-item .item-body p{margin:0;color:var(--muted);font-size:14px;line-height:1.45;}
+
+/* --- Testimonials section: centered title + horizontal cards --- */
+.testimonials-panel .panel-title {
+  text-align:center;
+  font-size:24px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+.testimonials-panel .panel-sub {
+  text-align:center;
+  color:var(--muted);
+  max-width:760px;
+  margin:0 auto 26px;
+  font-size:13px;
+}
+
+/* horizontal scroller of cards */
+.testimonials-row{
+  display:flex;
+  gap:22px;
+  overflow-x:auto;
+  padding-bottom:6px;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.testimonials-row::-webkit-scrollbar{display:none;}
+
+.testimonial-card{
+  background:#fff;
+  border-radius:16px;
+  min-width:260px;
+  width:300px;
+  padding:28px 18px 20px;
+  box-shadow: 0 8px 24px rgba(12,34,63,0.04);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-start;
+}
+
+/* avatar overlaps top center */
+.testimonial-card .avatar-wrap{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:-26px;
+  width:64px;height:64px;border-radius:9999px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:6px solid #fff;box-shadow:0 8px 18px rgba(12,34,63,0.06);
+}
+.testimonial-card .avatar{
+  width:100%;height:100%;background-size:cover;background-position:center;border-radius:9999px;
+}
+.testimonial-card .author{font-weight:700;font-size:14px;margin-top:10px}
+.testimonial-card .meta{font-size:12px;color:var(--muted)}
+.testimonial-card .quote{font-size:13px;color:#1f2937;margin-top:8px;line-height:1.45}
+
+/* make surrounding area pale so cards look inset like the screenshot */
+.testimonials-panel { background: transparent; }
+
+/* --- Comparison section: heading, small pill label, two-column lists --- */
+.compare-panel .badge-pill{
+  display:inline-block;
+  margin:0 auto 12px;
+  background:#e9f7ff;
+  color:#1a6fb3;
+  padding:6px 12px;
+  border-radius:9999px;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+}
+.compare-panel .panel-title{
+  text-align:center;
+  font-size:28px;
+  font-weight:800;
+  margin:8px 0 12px;
+}
+.compare-panel .panel-sub{
+  text-align:center;color:var(--muted);max-width:720px;margin:0 auto 28px;font-size:14px;
+}
+
+/* lists container */
+.compare-lists{
+  display:flex;
+  gap:48px;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:8px;
+}
+.compare-col{flex:0 0 45%;max-width:45%;}
+.compare-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+.compare-col li{background:transparent;padding-left:20px;position:relative;font-size:15px;color:#111}
+
+/* left problem badges (pink) */
+.compare-col.left li::before{
+  content: "✕";
+  position:absolute;
+  left:0;
+  top:0;
+  width:28px;height:28px;border-radius:8px;background:#ffeef0;color:#c94b62;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.03);
+}
+/* right solution badges (green) */
+.compare-col.right li::before{
+  content: "✓";
+  position:absolute;
+  left:0;
+  top:0;
+  width:28px;height:28px;border-radius:8px;background:#e7f9ee;color:#1b8a47;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.03);
+}
+
+/* === REPLACED SECTION: product-laptop styles ===
+     NOTE: Only this block replaces the previous .product-laptop/.laptop-inner/.lp-copy/.lp-art rules.
+     If you previously changed those rules, this is the only block you need to use to overwrite them.
+*/
+
+.product-laptop{
+  position: relative;
+  z-index: 0;
+
+  /* full-bleed trick */
+  width: 100vw;
+  left: 50%;
+  margin-left: -50vw;
+  max-width: 100vw;
+  box-sizing: border-box;
+
+  /* spacing and minimum height */
+  padding-top: 48px;
+  padding-bottom: 48px;
+  min-height: 320px;
+
+  /* background sizing/positioning — change as needed */
+  background-size: cover;             /* cover fills width and height while preserving aspect */
+  background-position: center right;  /* align important area to the right */
+  background-repeat: no-repeat;
+  opacity: 0.8;
+}
+
+.product-laptop .laptop-inner{
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
+/* left copy column */
+.product-laptop .lp-copy{
+  flex:1 1 60%;
+  max-width:60%;
+  padding:12px 0;
+}
+
+/* ensure headline and bullets align like screenshot */
+.product-laptop .lp-copy h3{
+  font-size:28px;
+  margin:0 0 14px;
+  font-weight:700;
+}
+.product-laptop .lp-copy p,
+product-laptop .lp-copy ul{
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.6;
+  margin:0 0 12px;
+}
+product-laptop .lp-copy ul{padding-left:20px}
+
+/* right art column with a contained laptop image */
+product-laptop .lp-art{
+  flex:0 0 36%;
+  max-width:36%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 0;
+}
+product-laptop .lp-art img{
+  width:100%;
+  max-width:420px;     /* prevents image from growing too large */
+  height:auto;
+  display:block;
+  border-radius:8px;
+  box-shadow: 0 18px 40px rgba(12,34,63,0.08);
+}
+
+/* Make sure small screens stack cleanly */
+@media (max-width:980px){
+  .product-laptop{padding:44px 0; min-height:0}
+  .product-laptop .laptop-inner{flex-direction:column-reverse;gap:18px;padding:0 18px}
+  .product-laptop .lp-copy{max-width:100%;text-align:left}
+  .product-laptop .lp-art{max-width:320px;flex-basis:100%}
+  .product-laptop .lp-art img{max-width:320px}
+}
+
+/* end replaced section */
+
+/* small helpers and responsiveness for other parts */
+@media (max-width:980px){
+  .feature-layout{flex-direction:column;align-items:center}
+  .feature-left,.feature-right{max-width:100%;flex-basis:100%}
+  .testimonials-row{justify-content:flex-start;padding:10px 8px}
+  .compare-lists{flex-direction:column;gap:18px}
+  .compare-col{max-width:100%;flex-basis:100%}
+  .panel{padding:24px;margin:18px 12px}
+  /* scale platform icons slightly on small screens */
+  .platform-badge{height:24px}
+}
+
+/* Full-bleed whole-image block */
+.page-bottom-fullimg{
+  position: relative;
+  width: 100vw;
+  left: 50%;
+  margin-left: -50vw;   /* full-bleed trick */
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0;
+  z-index: 0;
+}
+.page-bottom-fullimg .page-bottom-img{
+  display: block;
+  width: 100%;
+  height: auto;        /* preserve full image, scaled to viewport width */
+  object-fit: cover;
+}
+
+/* mobile safe fallback to avoid horizontal scrollbar */
+@media (max-width:980px){
+  .page-bottom-fullimg{
+    width: auto;
+    left: auto;
+    margin-left: 0;
+  }
+}

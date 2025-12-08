@@ -1,0 +1,695 @@
+/* styles.css
+   Extended landing page for sections 1–5 with placeholders and comments where to replace images/text.
+   After you drop your Figma-exported images into assets/, replace the filenames below or change the src in index.php.
+*/
+
+/* -- VARIABLES -- */
+:root{
+  --container-width: 1200px;
+  --accent: #0b82ff;
+  --muted: #6b7a8a;
+  --bg: #f6fbff;
+  --panel-pale: #e8f5fb;
+}
+
+/* -- RESET & BASE -- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #071232;
+  background: var(--bg);
+}
+
+/* -- LAYOUT CONTAINER -- */
+.container{
+  width:100%;
+  max-width:var(--container-width);
+  margin:0 auto;
+  padding:0 24px;
+}
+
+/* -- HEADER -- */
+.site-header{
+  position:fixed;
+  top:18px;
+  left:0;
+  right:0;
+  z-index:120;
+}
+.header-inner{ display:flex; align-items:center; gap:16px; height:56px; }
+.logo img{ height:64px; width:64px; border-radius:50%; display:block; object-fit:cover; }
+.nav{ margin-left:24px; display:flex; gap:20px; align-items:center; flex:1; }
+.nav-link{ color: rgba(7,18,50,0.9); text-decoration:none; font-weight:600; font-size:15px; }
+.actions{ display:flex; gap:12px; align-items:center; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:10px; text-decoration:none; border-radius:999px; font-weight:700; padding:10px 16px; font-size:14px; cursor:pointer; }
+.btn-ghost{ background: rgba(255,255,255,0.6); color: #071232; border: 1px solid rgba(2,2,2,0.04); backdrop-filter: blur(6px); }
+.btn-primary{ background: linear-gradient(90deg,#2d9cff,var(--accent)); color:white; border:none; box-shadow: 0 8px 30px rgba(11,72,166,0.08); }
+.btn-outline{ background:transparent; border:1px solid rgba(7,18,50,0.08); color:#071232; }
+
+/* -- HERO (Section 1) -- */
+.hero{
+  position: relative;
+  overflow: visible;
+  min-height: 800px;
+  padding: 110px 0 64px;
+  /* REPLACE background image with your Figma-exported gradient:
+     save it as assets/gradient.png and keep this reference */
+  background-image: url('gradient.png');
+  background-size: cover; background-position: center;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+}
+.hero-overlay{ position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(250,252,255,0.02)); z-index:2; pointer-events:none; }
+.hero-inner{ position: relative; z-index:50; display:flex; gap:40px; align-items:center; padding-top:10px; padding-bottom:40px; }
+.hero-left{ flex:1; max-width:640px; color:#071232; }
+.kicker{ display:inline-block; background: rgba(255,255,255,0.9); padding:8px 12px; border-radius:999px; font-weight:700; font-size:13px; color:#0b2b4a; margin-bottom:18px; box-shadow: 0 6px 18px rgba(12,27,60,0.04); }
+.hero-title{ margin:0 0 18px 0; font-size:46px; line-height:1.02; letter-spacing:-0.6px; font-weight:800; }
+.hero-sub{ margin:0 0 22px 0; color:var(--muted); font-size:17px; max-width:620px; }
+.hero-ctas{ display:flex; gap:14px; margin-bottom:22px; align-items:center; }
+.feature-list{ margin:0; padding:0; list-style:none; display:flex; gap:12px; flex-wrap:wrap; }
+.feature-list li{ background: rgba(255,255,255,0.9); padding:10px 12px; border-radius:12px; box-shadow: 0 8px 24px rgba(11,27,58,0.04); }
+
+/* hero illustration (absolute behind text) */
+/* REPLACE assets/hero-illustration.png with your exported image */
+.hero-illustration{
+  position:absolute;
+  right:48px;
+  top:84px;
+  width:820px;
+  height:500px;
+  object-fit:cover;
+  border-radius: 18px 96px 96px 18px;
+  opacity:0.6;
+  z-index:20;
+  pointer-events:none;
+  box-shadow: 0 22px 50px rgba(8,30,65,0.06);
+}
+
+/* Platform badges below feature list */
+.platforms{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-top:22px;
+}
+.platform-badge{
+  height:60px;
+  width:auto;
+  display:inline-block;
+  object-fit:contain;
+  opacity:100%;
+  vertical-align:middle;
+}
+.panel-badge{
+  height:28px;
+  opacity:0.85;
+}
+
+
+/* -- FEATURE VISUAL (Section 2) -- */
+.feature-visual{ display:flex; gap:48px; align-items:center; padding:56px 24px; flex-direction:row-reverse; }
+.visual-left{ flex:1; }
+.visual-left h2{ font-size:28px; margin:0 0 8px; }
+.visual-left p{ color:var(--muted); margin:0; max-width:600px; }
+.visual-right img{ width:100%; max-width:640px; height:auto; display:block; border-radius:14px; box-shadow:0 18px 40px rgba(11,27,58,0.04); }
+
+/* --- Testimonials section: centered title + horizontal cards --- */
+.testimonials-panel .panel-title {
+  text-align:center;
+  font-size:24px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+.testimonials-panel .panel-sub {
+  text-align:center;
+  color:var(--muted);
+  max-width:760px;
+  margin:0 auto 26px;
+  font-size:13px;
+}
+
+/* horizontal scroller of cards */
+.testimonials-row{
+  display:flex;
+  gap:22px;
+  overflow-x:auto;
+  padding-bottom:6px;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.testimonials-row::-webkit-scrollbar{display:none;}
+
+.testimonial-card{
+  background:#fff;
+  border-radius:16px;
+  min-width:260px;
+  width:300px;
+  padding:90px 18px 20px;
+  box-shadow: 0 8px 24px rgba(12,34,63,0.04);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-start;
+}
+
+/* avatar overlaps top center */
+.testimonial-card .avatar-wrap{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  top:10px;
+  width:64px;height:64px;border-radius:9999px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:6px solid #fff;box-shadow:0 8px 18px rgba(12,34,63,0.06);
+}
+.testimonial-card .avatar{
+  width:100%;height:100%;background-size:cover;background-position:center;border-radius:9999px;
+}
+.testimonial-card .author{font-weight:700;font-size:14px;margin-top:10px}
+.testimonial-card .meta{font-size:12px;color:var(--muted)}
+.testimonial-card .quote{font-size:13px;color:#1f2937;margin-top:8px;line-height:1.45}
+
+/* make surrounding area pale so cards look inset like the screenshot */
+.testimonials-panel { background: transparent; }
+
+
+/* --- Comparison section: heading, small pill label, two-column lists --- */
+.compare-panel .badge-pill{
+  display:inline-block;
+  margin:0 auto 12px;
+  background:#e9f7ff;
+  color:#1a6fb3;
+  padding:6px 12px;
+  border-radius:9999px;
+  font-size:12px;
+  font-weight:600;
+  text-align:center;
+}
+.compare-panel .panel-title{
+  text-align:center;
+  font-size:28px;
+  font-weight:800;
+  margin:8px 0 12px;
+}
+.compare-panel .panel-sub{
+  text-align:center;color:var(--muted);max-width:720px;margin:0 auto 28px;font-size:14px;
+}
+
+/* lists container */
+.compare-lists{
+  display:flex;
+  gap:48px;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:8px;
+}
+.compare-col{flex:0 0 45%;max-width:45%;}
+.compare-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+.compare-col li{background:transparent;padding-left:20px;position:relative;font-size:15px;color:#111}
+
+/* left problem badges (pink) */
+.compare-col.left li::before{
+  content: "✕";
+  position:absolute;
+  left:0;
+  top:0;
+  width:28px;height:28px;border-radius:8px;background:#ffeef0;color:#c94b62;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.03);
+}
+/* right solution badges (green) */
+.compare-col.right li::before{
+  content: "✓";
+  position:absolute;
+  left:0;
+  top:0;
+  width:28px;height:28px;border-radius:8px;background:#e7f9ee;color:#1b8a47;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.03);
+}
+/* ---------- Section 4 (white background scaffold) ---------- */
+.section-4{
+  /* REPLACE this image path with your gradient for this section if needed */
+  background-image: url('gradient.png');
+  background-size: cover;
+  background-position: center;
+  padding: 56px 24px;
+  border-radius: 12px;
+  margin: 36px auto;
+  max-width: 1200px;
+  box-shadow: 0 10px 36px rgba(8,30,65,0.03);
+  color: #ffffff; /* ensure text is readable on the gradient */
+}
+
+/* Keep the inner layout the same, but make text colors light for contrast */
+.s4-inner{
+  display:flex;
+  gap:36px;
+  align-items:center;
+}
+.s4-copy{ flex:1; }
+.s4-copy h2{ font-size:28px; margin:0 0 12px; color: #ffffff; }
+.s4-copy p{ color: rgba(255,255,255,0.92); margin:0 0 18px; }
+.s4-ctas{ display:flex; gap:12px; }
+
+/* media side - if the image needs a subtle frame on top of the gradient */
+.s4-media img{
+  width:100%;
+  max-width:520px;
+  border-radius:12px;
+  box-shadow: 0 18px 40px rgba(11,27,58,0.04);
+  background: rgba(255,255,255,0.02); /* tiny backing so light illustrations read well */
+}
+/* ---------- Section 5 (gradient background exact placement) ---------- */
+/* The gradient image must be placed at: assets/section5-gradient.png (or update path if you use a different name) */
+.section-5{
+  padding: 64px 24px;
+  /* REPLACE this image with your exported gradient for section 5 */
+  background-image: url('gradient.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 16px;
+  color: #ffffff;
+  margin-top:36px;
+}
+.section-5-inner{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:32px;
+  align-items:center;
+  max-width:1200px;
+  margin:0 auto;
+  padding:36px;
+}
+.s5-left h2{ font-size:34px; margin:0 0 12px; color:white; }
+.s5-left p{ color: rgba(255,255,255,0.95); margin:0 0 18px; }
+.audience-list{ list-style:none; margin:0; padding:0; font-size:24px; font-weight:800; color:white; text-align:center; line-height:1.9; }
+
+/* small screen adjustments */
+@media (max-width:980px){
+  .s3-cards{ gap:16px; padding-left:6px; }
+  .s3-card{ min-width:280px; padding:36px 18px 18px; }
+  .s3-avatar{ left:18px; top:-26px; width:56px; height:56px; border:5px solid #fff; }
+  .section-4 .s4-inner{ flex-direction:column; }
+  .section-5-inner{ grid-template-columns: 1fr; text-align:center; }
+}
+/* -- FOOTER -- */
+.site-footer{ padding:36px 0; background:transparent; }
+.footer-inner{ display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:14px; }
+
+/* -- RESPONSIVE -- */
+@media (max-width:1100px){
+  .hero-illustration{ width:640px; height:420px; right:28px; top:80px; border-radius:16px 80px 80px 16px; }
+  .feature-visual{ flex-direction:column-reverse; gap:24px; }
+  .section-3-grid{ grid-template-columns: 1fr; }
+  .s4-content{ flex-direction:column; }
+  .section-5-inner{ grid-template-columns: 1fr; }
+}
+@media (max-width:720px){
+  .nav{ display:none; }
+  .hero-inner{ flex-direction:column; gap:24px; align-items:flex-start; padding-top:20px; }
+  .hero{ padding-top:120px; min-height:520px; }
+  .hero-title{ font-size:32px; }
+  .hero-illustration{ display:none; }
+  .container{ padding:0 18px; }
+}
+/* Make the signup white panel match the login white panel.
+   Append this to your existing styles (after auth-override.css or styles.css).
+   It scopes rules to body.auth-page so it won't affect other pages.
+   No changes required to signup.php markup — this targets the existing
+   .signup-card / .signup-grid / .logo-large classes used in your signup page.
+*/
+
+/* variables fallback (if not defined in your main CSS) */
+:root{
+  --auth-card-radius: 10px;
+  --auth-accent-green: #335b25;
+  --auth-muted: #6b7a8a;
+}
+
+/* Make the signup card use the same styling & scroll behavior as the login card */
+body.auth-page .signup-card {
+ background: #ffffff;
+  border-radius: var(--card-radius);
+  padding:48px;
+  box-shadow: 0 18px 40px rgba(8,30,65,0.08);
+  display:flex;
+  align-items:center;
+}
+
+/* Use the same grid layout as the login card: left form (fluid) + right visual (fixed) */
+body.auth-page .signup-grid {
+  display: grid;
+  grid-template-columns: 1fr 520px; /* same as login layout */
+  gap: 28px;
+  align-items: center;
+}
+
+/* Ensure the form column and visual column match login styles */
+body.auth-page .signup-form-col { padding-right: 6px; }
+body.auth-page .signup-visual-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 8px;
+}
+
+/* Make the logo on the signup page match the large size used on login */
+body.auth-page .signup-visual-col .logo-large {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  max-width: 520px; /* match login's logo-xlarge */
+}
+
+/* Typography and spacing parity with login (keeps form headings consistent) */
+body.auth-page .signup-heading {
+  margin: 6px 0 18px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #071232;
+}
+body.auth-page .label-text { color: #515f6b; font-size: 13px; }
+
+/* Buttons: reuse login button style for signup */
+body.auth-page .btn-signup {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: var(--auth-accent-green);
+  color: white;
+  border: 0;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(10,50,20,0.08);
+}
+
+/* Divider and social buttons parity */
+body.auth-page .divider:before,
+body.auth-page .divider:after {
+  background: #e9eef5;
+}
+body.auth-page .social {
+  border: 1px solid #e6eefb;
+  background: white;
+  font-weight: 600;
+}
+
+/* Responsive: collapse to single column on narrow screens (same as login) */
+@media (max-width: 1100px) {
+  body.auth-page .signup-grid { grid-template-columns: 1fr 400px; }
+  body.auth-page .signup-visual-col .logo-large { max-width: 420px; }
+}
+@media (max-width: 900px) {
+  body.auth-page .signup-grid { grid-template-columns: 1fr; }
+  body.auth-page .signup-visual-col { order: -1; margin-bottom: 16px; }
+  body.auth-page .signup-card { padding: 24px; }
+  body.auth-page .signup-visual-col .logo-large { max-width: 260px; margin: 0 auto; }
+}
+
+/* Ensure page can scroll if something else prevents it */
+html, body {
+  height: 100%;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+
+/* --- Variables --- */
+:root{
+  --bg: #f6fbff;
+  --muted: #6b7a8a;
+  --card-radius: 10px;
+  --accent-green: #335b25; /* login CTA color (adjust if Figma uses a different hex) */
+}
+
+/* --- Base --- */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #071232;
+  background: var(--bg);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* decorative top notch (centered) */
+.device-notch{
+  position:fixed;
+  top:8px;
+  left:50%;
+  transform:translateX(-50%);
+  width:120px;
+  height:28px;
+  background: #0b0b0b;
+  border-radius:6px;
+  z-index:9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  pointer-events:none;
+  /* small center cut to mimic camera; optional */
+}
+.device-notch::after{
+  content:'';
+  display:block;
+  width:36px;
+  height:8px;
+  background:#000;
+  border-radius:4px;
+  margin:10px auto 0;
+  opacity:0.85;
+}
+
+/* --- Auth hero background (full-bleed) --- */
+.auth-hero{
+  min-height:100vh;
+  width:100%;
+  background-image: url('gradient.png'); /* REPLACE with your gradient image */
+  background-size: cover;
+  background-position: center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:48px 18px;
+}
+
+/* center container */
+.auth-inner.container{
+  width:100%;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+/* white card */
+.auth-card{
+  background: #ffffff;
+  border-radius: var(--card-radius);
+  padding:48px;
+  box-shadow: 0 18px 40px rgba(8,30,65,0.08);
+  display:flex;
+  align-items:center;
+}
+
+
+
+/* grid inside card: left form (1fr) / right visual (fixed) */
+.auth-grid{
+  display:grid;
+  grid-template-columns: 1fr 520px; /* adjust 520px to match logo width */
+  gap:28px;
+  align-items:center;
+}
+
+/* Left column form styles */
+.auth-form-col{ padding-right:6px; }
+.back-link{ display:inline-block; color:#071232; text-decoration:none; font-weight:700; margin-bottom:6px; }
+.auth-heading{ margin:6px 0 8px; font-size:28px; font-weight:800; color:#071232; }
+.auth-sub{ margin:0 0 18px; color:var(--muted); font-size:14px; }
+
+/* error messages */
+.errors{ margin-bottom:12px; }
+.error{ background:#fff0f0; color:#7c1212; padding:8px 12px; border-radius:8px; margin-bottom:8px; }
+
+/* form fields */
+.field{ display:block; margin-bottom:12px; }
+.label-text{ display:block; font-size:13px; color:#515f6b; margin-bottom:8px; }
+.field input[type="email"],
+.field input[type="password"]{
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #e6eefb;
+  background:#fbfdff;
+  font-size:15px;
+  outline:none;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+.field input:focus{
+  box-shadow: 0 6px 18px rgba(11,72,166,0.06);
+  border-color: #bcd8ff;
+}
+
+/* password toggle */
+.pw-field{ position:relative; display:flex; align-items:center; }
+.pw-toggle{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:0; background:transparent; cursor:pointer; font-size:16px; }
+
+/* checkbox */
+.checkbox{ display:flex; gap:10px; align-items:center; margin-top:8px; font-size:13px; color:#4d5762; }
+.checkbox a{ color:#0b82ff; text-decoration:underline; }
+
+/* primary login button */
+.form-actions{ margin-top:14px; }
+.btn-login{
+  width:100%;
+  padding:12px 18px;
+  border-radius:8px;
+  background: var(--accent-green);
+  color:white;
+  border:0;
+  font-weight:700;
+  font-size:15px;
+  cursor:pointer;
+  box-shadow: 0 8px 24px rgba(10,50,20,0.08);
+}
+
+/* divider */
+.divider{ display:flex; align-items:center; gap:12px; margin:18px 0; }
+.divider:before, .divider:after{ content:''; flex:1; height:1px; background:#e9eef5; }
+.divider span{ color:#6b7a8a; font-size:13px; padding:0 12px; }
+
+/* social buttons row */
+.social-row{ display:flex; gap:12px; flex-wrap:wrap; }
+.social{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #e6eefb;
+  background:white;
+  text-decoration:none;
+  color:#071232;
+  font-weight:600;
+}
+.social .social-icon{ width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; }
+
+/* bottom signup hint */
+.have-account{ margin-top:12px; text-align:left; font-size:14px; color:#6b7a8a; }
+.have-account a{ color:#0b82ff; font-weight:700; text-decoration:none; }
+
+/* Right column logo styles */
+.auth-visual-col{ display:flex; align-items:center; justify-content:center; padding-left:8px; }
+.logo-wrap{ display:flex; align-items:center; justify-content:center; width:100%; }
+.logo-large{ width:100%; height:auto; object-fit:contain; max-width:100%; }
+.logo-xlarge{ max-width:520px; } /* very large logo to match screenshot */
+
+/* --- Responsive tweaks --- */
+@media (max-width:1100px){
+  .auth-grid{ grid-template-columns: 1fr 400px; }
+  .logo-xlarge{ max-width:420px; }
+}
+@media (max-width:900px){
+  .auth-grid{ grid-template-columns: 1fr; }
+  .auth-visual-col{ order:-1; margin-bottom:16px; }
+  .logo-xlarge{ max-width:260px; margin:0 auto; }
+  .auth-card{ padding:24px; }
+}
+
+
+
+/*Sectiono 5*/
+/* Two-panel CTA (speech-bubble connection) */
+.two-panel{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:36px;
+  align-items:stretch;
+  padding:56px 24px;
+}
+.panel{
+  position:relative;
+  border-radius:22px;
+  padding:40px;
+  min-height:260px;
+  box-shadow:0 10px 36px rgba(8,30,65,0.04);
+}
+
+/* left bright blue panel */
+.panel-left{
+  background: linear-gradient(180deg, #00a0ff, #0090f0);
+  color:white;
+  border-radius:28px 20px 20px 28px;
+}
+
+/* create the 'notch' on the right edge that visually connects to the right panel
+   This is done with an :after pseudo element on the left panel. */
+.panel-left::after{
+  content: '';
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 72px;
+  height: 120px;
+  background: var(--bg); /* same as page background to create the connecting effect */
+  border-radius: 20px;
+  z-index:1;
+  box-shadow: -6px 0 0 rgba(0,0,0,0.0);
+}
+
+/* right pale panel */
+.panel-right{
+  background: var(--panel-pale);
+  color: #0b82ff;
+  border-radius:20px 28px 28px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.audience-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+  text-align:center;
+  font-size:28px;
+  line-height:1.75;
+  font-weight:700;
+  color: #0b82ff;
+}
+
+/* store buttons */
+.store-buttons{ display:flex; gap:12px; margin-top:28px; }
+.store-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.45);
+  color: white;
+  padding:12px 20px;
+  border-radius:999px;
+  text-decoration:none;
+  font-weight:700;
+}
+.store-icon{ font-size:18px; }
+
+/* content area */
+.content{ padding:40px 24px; }
+.content h3{ font-size:22px; margin:0 0 8px; }
+.content p{ color:var(--muted); }
+
+/* footer */
+.site-footer{ padding:36px 0; background:transparent; }
+.footer-inner{ display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:14px; }
+
+/* responsive */
+@media (max-width: 1100px){
+  
+  .two-panel{ grid-template-columns: 1fr; }
+  .panel-left::after{ display:none; }
+  .panel{ min-height:220px; }
+  .feature-visual{ flex-direction:column-reverse; gap:24px; }
+}
+
+
