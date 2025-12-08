@@ -1,8 +1,8 @@
 <?php
-// dashboard.php - updated to use a Figma-style modal for calendar event create/edit
-// Requires lib/auth.php (require_auth(), current_user()) and lib/db.php (db()).
-// Uses FullCalendar and the API endpoints at /api/calendar.php and /api/tasks.php
+// dashboard.php - Dashboard page (Figma-styled UI + full calendar + tasks).
+// Requires: lib/db.php and lib/auth.php (make sure those files exist and DB is configured).
 session_start();
+
 require_once __DIR__ . '/lib/db.php';
 require_once __DIR__ . '/lib/auth.php';
 
@@ -17,38 +17,47 @@ $user = current_user();
   <title>Dashboard — IntelliPlan</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- FullCalendar CSS (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 
-  <!-- site styles + dashboard-specific -->
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="styles-dashboard.css">
-  <!-- small additional styles for modal and layout -->
+  <!-- Use your main styles + dashboard styles -->
+  <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/styles-dashboard-extra.css">
+  <style>
+    /* small overrides for layout to match Figma-like proportions */
+    body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #f6fbff; color: #071232; }
+    .dashboard-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px; }
+    .dashboard-main{ display:grid; grid-template-columns: 700px 1fr; gap:28px; padding:18px 24px; align-items:start; max-width:1200px; margin:0 auto 80px; }
+    .card { background:white; border-radius:12px; padding:18px; box-shadow:0 10px 30px rgba(8,30,65,0.04); }
+    header.site-header { position:static; padding:18px 0; background:transparent; }
+    .welcome { font-weight:700; margin-right:8px; }
+    #calendar { width:100%; min-height:500px; }
+    .container { max-width:1200px; margin:0 auto; padding:0 24px; }
+  </style>
 </head>
 <body>
 
   <header class="site-header">
-    <div class="container header-inner">
+    <div class="container header-inner" style="align-items:center;">
       <div class="logo"><a href="index.php"><img src="assets/logo.jpg" alt="logo" style="height:44px;border-radius:6px"></a></div>
-      <nav class="nav"><!-- minimal nav --> </nav>
-      <div class="actions">
+      <div style="flex:1"></div>
+      <div class="actions" style="align-items:center">
         <span class="welcome">Hi, <?php echo htmlspecialchars($user['name']); ?></span>
         <a class="btn btn-ghost" href="logout.php">Log out</a>
       </div>
     </div>
   </header>
 
-  <main style="padding-top:96px;">
+  <main style="padding-top:18px;">
     <div class="container">
       <div class="dashboard-header">
-        <h1 style="margin:0;font-size:24px;">Dashboard</h1>
-        <div style="color:var(--muted)">Overview of your tasks and calendar</div>
+        <div>
+          <h1 style="margin:0;font-size:28px;font-weight:800;">Dashboard</h1>
+          <div style="color:var(--muted)">Overview of your tasks and calendar</div>
+        </div>
       </div>
 
       <div class="dashboard-main">
-        <!-- Left column: calendar -->
+        <!-- Left: Calendar and quick add -->
         <div>
           <div class="card">
             <div id="calendar"></div>
@@ -59,15 +68,21 @@ $user = current_user();
           <div class="card">
             <h3 style="margin-top:0;">Quick add event</h3>
             <form id="quick-event-form">
-              <label style="display:block;margin-bottom:8px;">Title<input id="qe-title" required class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee"></label>
-              <label style="display:block;margin-bottom:8px;">Start<input id="qe-start" type="datetime-local" class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee"></label>
-              <label style="display:block;margin-bottom:8px;">End<input id="qe-end" type="datetime-local" class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee"></label>
+              <label style="display:block;margin-bottom:8px;">Title
+                <input id="qe-title" required class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee">
+              </label>
+              <label style="display:block;margin-bottom:8px;">Start
+                <input id="qe-start" type="datetime-local" class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee">
+              </label>
+              <label style="display:block;margin-bottom:8px;">End
+                <input id="qe-end" type="datetime-local" class="input" style="width:100%;padding:8px;border-radius:6px;border:1px solid #eee">
+              </label>
               <button class="btn btn-primary" type="submit">Add event</button>
             </form>
           </div>
         </div>
 
-        <!-- Right column: tasks list -->
+        <!-- Right: Tasks and notes -->
         <div>
           <div class="card">
             <h3 style="margin-top:0;">Tasks</h3>
@@ -92,7 +107,7 @@ $user = current_user();
     </div>
   </main>
 
-  <!-- Event modal (Figma-style) -->
+  <!-- Modal (Figma-style) -->
   <div id="event-modal-overlay" class="modal-overlay" aria-hidden="true">
     <div id="event-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
       <div class="modal-header">
@@ -138,11 +153,10 @@ $user = current_user();
     </div>
   </div>
 
-  <!-- FullCalendar + Luxon (for timezone parsing) from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
-  <!-- dashboard client logic (modal-enabled) -->
+  <!-- dashboard client script (use the asset you already have) -->
   <script src="assets/dashboard.js"></script>
 </body>
 </html>

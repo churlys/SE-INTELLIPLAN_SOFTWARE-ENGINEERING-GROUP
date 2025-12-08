@@ -1,5 +1,17 @@
--- schema.sql
--- Run this on your MySQL server to add tables for the dashboard features.
+-- schema_full.sql
+-- Run: mysql -u root -p < schema_full.sql
+-- This creates the database and all required tables (users, tasks, calendar_events)
+
+CREATE DATABASE IF NOT EXISTS student_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE student_prod;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(191) NOT NULL,
+  email VARCHAR(191) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS tasks (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
