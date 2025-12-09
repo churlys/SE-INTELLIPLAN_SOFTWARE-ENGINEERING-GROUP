@@ -19,7 +19,7 @@ if ($envDsn && $envUser !== false) {
     // Local defaults - edit to match your local MySQL credentials
     define('DB_HOST', '127.0.0.1');
     define('DB_PORT', '3306');
-    define('DB_NAME', 'schema.sql'); // make sure this matches the DB you create
+    define('DB_NAME', 'student_prod'); // make sure this matches the DB you create
     define('DB_USER', 'root');
     define('DB_PASS', 'root'); // set your MySQL password here
     define('DB_DSN', 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=utf8mb4');

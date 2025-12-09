@@ -61,9 +61,6 @@ $csrf = csrf_token();
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Log in — IntelliPlan</title>
 
-  <!-- Replace with the exact font if you provide it; Inter is a close match -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-
   <!-- page styles for the login screen -->
   <link rel="stylesheet" href="assets/styles.css">
 </head>
