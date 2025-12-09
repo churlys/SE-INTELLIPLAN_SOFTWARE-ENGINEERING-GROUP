@@ -3,36 +3,6 @@
    After you drop your Figma-exported images into assets/, replace the filenames below or change the src in index.php.
 */
 
-/* -- LOCAL FONTS -- */
-@font-face {
-  font-family: 'Inter';
-  src: url('fonts/Inter-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Inter';
-  src: url('fonts/Inter-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Inter';
-  src: url('fonts/Inter-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Inter';
-  src: url('fonts/Inter-ExtraBold.woff2') format('woff2');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* -- VARIABLES -- */
 :root{
   --container-width: 1200px;
