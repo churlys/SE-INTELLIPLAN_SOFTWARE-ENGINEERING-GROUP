@@ -75,11 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
 
   <!-- Sidebar -->
   <aside class="app-sidebar" aria-label="Primary navigation">
-    <div class="logo"><a href="index.php"><img src="assets/logo-large.png" alt="logo" style="width:56px;height:56px;object-fit:contain" onerror="this.style.display='none'"></a></div>
+    
     <nav class="nav" aria-label="Main">
-      <a class="nav-item active" href="#"><span aria-hidden="true">🏠</span></a>
-      <a class="nav-item" href="calendar.php"><span aria-hidden="true">📅</span></a>
-      <a class="nav-item" href="#"><span aria-hidden="true">📚</span></a>
+      <button class="nav-item"><span aria-hidden="true">🏠</span></button>
+      <button class="nav-item" onclick="window.location.href='calendar.php'"><span aria-hidden="true">📅</span></button>
+      <button class="nav-item"><span aria-hidden="true">📚</span></button>
     </nav>
 
     <div style="flex:1"></div>
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
   <!-- Main -->
   <main class="app-main">
     <!-- header -->
-    <div class="top-header">
+    <header class="top-header" role="banner">
       <div style="display:flex;align-items:center;gap:12px">
         <div class="brand">
           <div class="logo-sm"><img src="assets/logo.jpg" alt="logo" style="width:56px;height:56px;object-fit:contain" onerror="this.style.display='none'"></div>
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
           <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
         </div>
       </div>
-    </div>
+    </header>
 
     <!-- flash messages -->
     <div style="max-width:1260px;margin:6px auto 0;padding:0 12px;">
@@ -135,10 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
 
     <!-- dashboard grid -->
     <div class="dashboard-wrap">
-      <!-- left -->
-      <div class="left-column">
+      <!-- left content -->
+      <div>
+        <article style="background: white; border-radius: 14px; padding: 20px; box-shadow: 0 8px 24px rgba(8,30,65,0.05); margin-left: 16px;">
+          <div class="left-column">
         <div class="hero-block">
-          <div id="hero-left" class="hero-left" style="background-image: url('assets/gradient.png');">
+          <div id="hero-left" class="hero-left">
             <div class="title-kicker">0 task due today.</div>
             <div class="hero-title">GOOD AFTERNOON.</div>
             <div class="hero-sub">Focus on your top tasks and schedule. Keep momentum going — you’ve got this.</div>
@@ -146,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
 
           <div class="hero-right">
             <div class="timer-card">
-              <div class="timer-label">Step Watch</div>
+              <div class="timer-label">Stp Watch</div>
               <div class="timer-big" id="timer">25:00</div>
               <div class="timer-cta">
                 <button class="btn">▶</button>
@@ -178,29 +180,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
             <div style="color:var(--muted);font-size:12px">Last 7 days</div>
           </div>
         </div>
+          </div>
+        </article>
 
-        <div class="filters-row">
-          <div class="filter-card">
-            <label style="font-weight:700;color:var(--muted)">Classes</label>
-            <select style="margin-left:auto"><option>All</option></select>
-          </div>
-          <div class="filter-card">
-            <label style="font-weight:700;color:var(--muted)">Tasks</label>
-            <select style="margin-left:auto"><option>All</option></select>
-          </div>
-          <div class="filter-card">
-            <label style="font-weight:700;color:var(--muted)">Exams</label>
-            <select style="margin-left:auto"><option>Upcoming</option></select>
-          </div>
+        
+        <!-- filters row (outside white card) -->
+        <div class="filters-row" style="margin-left: 16px; margin-top: 16px;">
+          <!-- filters go here -->
         </div>
       </div>
 
-      <!-- right -->
+      <!-- right sidebar -->
       <aside class="right-column">
+        <article style="background: white; border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(8,30,65,0.05); min-width: 280px;">
         <div class="small-calendar">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <strong>Calendar</strong>
-            <select class="input"><option>Day</option><option>Week</option><option>Month</option></select>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;font-size:11px;font-weight:600;text-align:center;color:var(--muted)">
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+            <div>Sun</div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <strong style="font-size:14px">Calendar</strong>
+            <select class="input" style="font-size:12px;padding:4px 8px"><option>Day</option><option>Week</option><option>Month</option></select>
           </div>
 
           <div class="chips">
@@ -221,10 +227,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
             <div style="opacity:0.4;color:var(--muted);font-size:13px;padding-left:8px">7 AM</div>
           </div>
         </div>
+        </article>
 
+        <article style="background: white; border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(8,30,65,0.05);">
         <div class="small-calendar">
-          <strong>Quick actions</strong>
-          <div style="color:var(--muted);margin-top:8px">Create a new event, task or reminder.</div>
+          <strong style="font-size:14px">Quick actions</strong>
+          <div style="color:var(--muted);margin-top:8px;font-size:12px">Create a new event, task or reminder.</div>
 
           <!-- Upload gradient form (writes to assets/gradient-hero.png) -->
           <form method="post" enctype="multipart/form-data" style="margin-top:12px">
@@ -239,6 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gradient_upload'])) {
           </form>
 
         </div>
+        </article>
       </aside>
     </div>
   </main>

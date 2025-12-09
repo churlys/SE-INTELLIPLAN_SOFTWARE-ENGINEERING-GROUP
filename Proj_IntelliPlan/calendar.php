@@ -62,7 +62,7 @@ $user = current_user();
 
   <!-- MAIN -->
   <main class="app-main">
-    <div class="top-header">
+    <header class="top-header" role="banner">
       <div class="brand-time">
         <div class="logo-sm"><img src="assets/logo.jpg" alt="logo" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"></div>
         <div>
@@ -79,7 +79,7 @@ $user = current_user();
           <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
         </div>
       </div>
-    </div>
+    </header>
 
     <div class="dashboard-wrap">
       <!-- LEFT: Calendar white panel -->
