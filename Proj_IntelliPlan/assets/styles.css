@@ -562,9 +562,7 @@ body{
 .pw-field{ position:relative; display:flex; align-items:center; }
 .pw-toggle{ position:absolute; right:8px; top:50%; transform:translateY(-50%); border:0; background:transparent; cursor:pointer; font-size:16px; }
 
-/* checkbox */
-.checkbox{ display:flex; gap:10px; align-items:center; margin-top:8px; font-size:13px; color:#4d5762; }
-.checkbox a{ color:#0b82ff; text-decoration:underline; }
+
 
 /* primary login button */
 .form-actions{ margin-top:14px; }

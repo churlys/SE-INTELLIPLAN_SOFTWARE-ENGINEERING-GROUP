@@ -1,11 +1,4 @@
 <?php
-// signup.php
-// Sign-up page styled to match the provided Figma screenshot.
-// Place this file in your web root alongside styles.css and the assets/ folder.
-// This version re-uses lib/auth.php for CSRF and registration helpers (register_user(), login_user(), csrf_token()).
-// If you didn't add lib/auth.php yet, either add it or remove the auth includes and adapt the handler.
-
-session_start();
 if (file_exists(__DIR__ . '/lib/auth.php')) {
   require_once __DIR__ . '/lib/auth.php';
 } else {
@@ -66,15 +59,15 @@ $csrf = csrf_token();
 </head>
 <body class="auth-page">
 
-  <!-- Full-bleed gradient background image (replace assets/gradient-auth.png with your Figma-exported gradient) -->
+ 
   <main class="auth-hero" role="main" aria-labelledby="signup-title">
     <div class="auth-inner container">
-      <!-- centered white card -->
+      
       <div class="auth-card auth-card-scroll" role="region" aria-labelledby="signup-title">
         <div class="auth-grid">
-          <!-- LEFT: Form column -->
+          
           <div class="auth-form-col">
-            <!-- small back arrow (optional) -->
+            
             <a class="back-link" href="index.php" aria-label="Back to home">←</a>
 
             <h1 id="signup-title" class="auth-heading">Get Started Now!</h1>
@@ -116,13 +109,9 @@ $csrf = csrf_token();
                 </div>
               </label>
 
-              <label class="checkbox">
-                <input type="checkbox" name="accept" value="1" <?php echo isset($_POST['accept']) ? 'checked' : ''; ?>>
-                <span>I agree to the <a href="#" target="_blank" rel="noopener">terms & policy</a></span>
-              </label>
+            
 
               <div class="form-actions">
-                <!-- primary signup CTA color approximates Figma (green). Replace color in CSS if needed. -->
                 <button class="btn-login" type="submit">Signup</button>
               </div>
 
@@ -130,7 +119,7 @@ $csrf = csrf_token();
 
               <div class="social-row">
                 <a class="social social-google" href="#" aria-label="Sign in with Google">
-                  <!-- replace with svg/icon per design if desired -->
+                  
                   <span class="social-icon">G</span> Sign in with Google
                 </a>
                 <a class="social social-apple" href="#" aria-label="Sign in with Apple">

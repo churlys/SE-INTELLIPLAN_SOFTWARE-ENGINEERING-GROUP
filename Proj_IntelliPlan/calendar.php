@@ -1,4 +1,4 @@
-<?php
+`   ``<?php
 // calendar.php
 // Calendar page that mirrors the Figma layout.
 // - Requires lib/auth.php for require_auth()/current_user()
