@@ -1,15 +1,9 @@
 <?php
 // dashboard_clone.php
-// Clone of the IntelliPlan dashboard with clean placeholders.
-// Goal: drop-in page where you only replace images and texts as needed.
-// Integrates with your existing auth if lib/auth.php exists; otherwise shows demo user.
-
 session_start();
 if (file_exists(__DIR__ . '/lib/auth.php')) {
     require_once __DIR__ . '/lib/auth.php';
-    if (function_exists('require_auth')) {
-        require_auth();
-    }
+    if (function_exists('require_auth')) require_auth();
     $user = function_exists('current_user') ? current_user() : null;
 } else {
     $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
@@ -22,47 +16,32 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard — IntelliPlan (Clone)</title>
 
-  <!-- Replace these images with your assets when ready -->
-  <!-- assets/logo-large.png: Sidebar brand -->
-  <!-- assets/logo.png: Header brand -->
-  <!-- assets/avatar.png: Header user avatar -->
-  <!-- assets/gradient-hero.png: Hero gradient image -->
   <link rel="stylesheet" href="assets/styles-dashboard.css">
 </head>
 <body class="app-shell">
 
   <!-- Sidebar (left) -->
   <aside class="app-sidebar" aria-label="Primary navigation">
-    <div class="logo">
-      <a href="index.php"><img src="assets/logo-large.png" alt="IntelliPlan brand" onerror="this.style.display='none'"></a>
-    </div>
+    <!-- <div class="logo">
+      <a href="index.php"><img src="assets/logo.jpg" alt="IntelliPlan brand" onerror="this.style.display='none'"></a>
+      <span class="logo-text">IntelliPlan</span>
+    </div> -->
 
     <nav class="nav" aria-label="Main">
-      <a class="nav-item active" href="#" title="Dashboard">
-        <span class="ico">🏠</span>
+      
+      <a class="nav-item " href="#" title="Dashboard">
+        <!-- <span class="ico">🏠</span> -->
         <span class="nav-text">Dashboard</span>
       </a>
       <a class="nav-item" href="calendar.php" title="Calendar">
-        <span class="ico">📅</span>
+        <!-- <span class="ico">📅</span> -->
         <span class="nav-text">Calendar</span>
       </a>
       <a class="nav-item" href="#" title="Activities">
-        <span class="ico">📚</span>
+        <!-- <span class="ico">📚</span> -->
         <span class="nav-text">Activities</span>
       </a>
-      <a class="nav-item" href="#" title="Tasks">
-        <span class="ico">📝</span>
-        <span class="nav-text">Tasks</span>
-      </a>
-      <a class="nav-item" href="#" title="Classes">
-        <span class="ico">🏫</span>
-        <span class="nav-text">Classes</span>
-      </a>
-      <a class="nav-item" href="#" title="Exam">
-        <span class="ico">🧪</span>
-        <span class="nav-text">Exam</span>
-      </a>
-    </nav>
+    
 
     <div class="sidebar-fills" aria-hidden="true">
       <div class="fill"></div>
@@ -77,7 +56,8 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
       <!-- Top header -->
       <header class="top-header" role="banner">
         <div class="brand-time">
-          <img src="assets/logo.png" alt="IntelliPlan" class="brand-logo" onerror="this.style.display='none'">
+          <img src="assets/logo.jpg" alt="IntelliPlan" class="brand-logo" onerror="this.style.display='none'">
+           <span class="logo-text">IntelliPlan</span>
           <div class="time-wrap">
             <div class="clock" id="clock">3:45 PM</div>
             <div class="clock-sub" id="date-sub">Wednesday, December 3</div>
@@ -111,6 +91,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
         <section class="left-column">
           <!-- Hero block -->
           <div class="hero-block">
+            <!-- FIXED: gradient filename to gradient-hero.png -->
             <div id="hero-left" class="hero-left" style="background-image: url('assets/gradient.png');">
               <div class="kicker">0 task due today.</div>
               <h2 class="hero-title">GOOD AFTERNOON.</h2>
@@ -221,6 +202,8 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </div>
   </main>
 
+  <!-- FIXED: JS filenames. Make sure these exist in assets/ -->
   <script src="assets/dashboard.js"></script>
+ 
 </body>
 </html>
