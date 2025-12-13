@@ -1,138 +1,105 @@
-`   ``<?php
-// calendar.php
-// Calendar page that mirrors the Figma layout.
-// - Requires lib/auth.php for require_auth()/current_user()
-// - Includes an editable logo + editable background (local replacement via file input + localStorage for temporary testing)
-// - Uses FullCalendar for the main calendar area (day/week/month). Place assets in assets/
-//
-// Usage:
-// 1. Add lib/db.php and lib/auth.php (already in your project)
-// 2. Place assets/styles-calendar.css and assets/calendar.js in assets/
-// 3. Start server: php -S localhost:8000
-// 4. Visit /calendar.php (must be logged in)
+<?php
 session_start();
-require_once __DIR__ . '/lib/auth.php';
-require_once __DIR__ . '/lib/db.php';
-require_auth();
-$user = current_user();
+if (file_exists(__DIR__ . '/lib/auth.php')) {
+  require_once __DIR__ . '/lib/auth.php';
+  if (function_exists('require_auth')) require_auth();
+  $user = function_exists('current_user') ? current_user() : null;
+} else {
+  $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
+}
+
+date_default_timezone_set('UTC');
+$now = new DateTime('now');
+function hourLabel(int $hour): string {
+  return date('g A', mktime($hour, 0));
+}
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Calendar — IntelliPlan</title>
+  <title>Dashboard — IntelliPlan (Clone)</title>
 
-  <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/styles-calendar.css">
-
-  <!-- FullCalendar (for the real calendar area) -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles-dashboard.css">
 </head>
 <body class="app-shell">
 
-  <!-- SIDEBAR -->
+  
   <aside class="app-sidebar" aria-label="Primary navigation">
-    <div class="logo">
-      <!-- editable logo (click edit to replace) -->
-      <img id="site-logo" src="assets/logo.png" alt="IntelliPlan Logo" onerror="this.style.display='none'">
-    </div>
+   
 
-    <nav role="navigation" aria-label="Main" class="nav">
-      <div class="nav-item"><a href="dashboard.php" title="Dashboard" style="text-decoration:none">🏠</a></div>
-      <div class="nav-item active"><a href="calendar.php" title="Calendar" style="text-decoration:none">📅</a></div>
-      <div class="nav-item"><a href="#" title="Activities" style="text-decoration:none">📚</a></div>
+    <nav class="nav" aria-label="Main">
+      
+      <a class="nav-item " href="dashboard.php" title="Dashboard">
+   
+        <span class="nav-text">Dashboard</span>
+      </a>
+      <a class="nav-item" href="calendar.php" title="Calendar">
+      
+        <span class="nav-text">Calendar</span>
+      </a>
+      <a class="nav-item" href="#" title="Activities">
+      
+        <span class="nav-text">Activities</span>
+      </a>
     </nav>
+    
 
-    <div style="flex:1"></div>
-
-    <div style="width:100%;display:flex;flex-direction:column;gap:10px;align-items:center">
-      <div style="width:64%;height:44px;background:#f2f6fb;border-radius:8px"></div>
-      <div style="width:64%;height:44px;background:#f2f6fb;border-radius:8px"></div>
-    </div>
-
-    <!-- small image edit controls -->
-    <div style="margin-top:18px;">
-      <label class="image-edit">
-        <button id="edit-logo-btn" class="edit-btn">Edit logo</button>
-        <input id="logo-file" type="file" accept="image/*">
-      </label>
+    <div class="sidebar-fills" aria-hidden="true">
+      <div class="fill"></div>
+      <div class="fill"></div>
+      <div class="fill"></div>
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="app-main">
-    <header class="top-header" role="banner">
-      <div class="brand-time">
-        <div class="logo-sm"><img src="assets/logo.jpg" alt="logo" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"></div>
-        <div>
-          <div class="title">IntelliPlan</div>
-          <div class="current-time" id="clock">3:45 PM</div>
-          <div class="current-sub" id="date-sub">Wednesday, December 3</div>
-        </div>
-      </div>
-
-      <div class="header-controls">
-        <button class="btn-ghost" title="Settings">⚙️</button>
-        <div class="user-chip">
-          <img src="assets/avatar.png" alt="avatar" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">
-          <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
-        </div>
-      </div>
-    </header>
-
-    <div class="dashboard-wrap">
-      <!-- LEFT: Calendar white panel -->
-      <section class="calendar-panel">
-        <div class="calendar-controls">
-          <div class="left">
-            <button class="control-btn" id="prev-day">◀</button>
-            <div style="width:220px;text-align:center;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.85)">05 Dec, Friday, 2025</div>
-            <button class="control-btn" id="next-day">▶</button>
-          </div>
-
-          <div class="view-toggle">
-            <button class="control-btn" data-view="timeGridDay">Day</button>
-            <button class="control-btn" data-view="timeGridWeek">Week</button>
-            <button class="control-btn" data-view="dayGridMonth">Month</button>
-            <button class="control-btn" id="today-btn">Today</button>
+    <div class="container-inner">
+      <header class="top-header" role="banner">
+        <div class="brand-time">
+          <img src="assets/logo.jpg" alt="IntelliPlan" class="brand-logo" onerror="this.style.display='none'">
+          <span class="logo-text">IntelliPlan</span>
+          <div class="time-wrap">
+            <div class="clock" id="clock">3:45 PM</div>
+            <div class="clock-sub" id="date-sub">Wednesday, December 3</div>
           </div>
         </div>
 
-        <!-- main calendar (FullCalendar) -->
-        <div id="main-calendar"></div>
-      </section>
+        <div class="header-controls">
+          <?php if (function_exists('csrf_token')): ?>
+          <form action="logout.php" method="post" class="inline">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+            <button class="btn-ghost" type="submit">Log out</button>
+          </form>
+          <?php else: ?>
+          <a class="btn-ghost" href="index.php">Home</a>
+          <?php endif; ?>
 
-      <!-- RIGHT: small calendar and widgets -->
-      <aside class="right-column">
-        <div class="small-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <strong>Calendar</strong>
-            <select class="input" id="small-range"><option>Day</option><option>Week</option></select>
+          <div class="user-chip">
+            <img src="assets/avatar.png" alt="avatar" class="avatar" onerror="this.style.display='none'">
+            <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
           </div>
-
-          <div class="day-chips">
-            <div class="day-chip">Mon 1</div>
-            <div class="day-chip">Tue 2</div>
-            <div class="day-chip" style="background:linear-gradient(180deg,#dfeaff,#f0e9ff)">Wed 3</div>
-            <div class="day-chip">Thu 4</div>
-            <div class="day-chip">Fri 5</div>
-          </div>
-
-          <div id="mini-calendar" style="height:260px;border-radius:8px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid var(--soft-border)"></div>
         </div>
-
-        <div class="small-card">
-          <strong>Quick actions</strong>
-          <div style="margin-top:8px;color:var(--muted)">Create a new event, task or reminder.</div>
-        </div>
-      </aside>
+      </header>
     </div>
-  </main>
 
-  <!-- scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-  <script src="assets/calendar.js"></script>
+    <div class="container-inner">
+      <div class="calendar-view">
+            <div style="display:flex; align-items:center;">
+              <div class="day-label"><?php echo strtoupper($now->format('D')); ?></div>
+              <div class="date-badge"><?php echo $now->format('j'); ?></div>
+            </div>
+
+            <div class="calendar-grid">
+              <?php for ($h = 1; $h <= 23; $h++): ?>
+                <div class="hour-row">
+                  <div class="hour-label"><?php echo hourLabel($h); ?></div>
+                  <div class="hour-cell"></div>
+                </div>
+              <?php endfor; ?>
+            </div>
+      </div>
+    </div>
+    </main>
 </body>
 </html>

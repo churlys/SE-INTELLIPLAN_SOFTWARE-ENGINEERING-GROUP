@@ -1,21 +1,10 @@
+session_start();s
 <?php
-// login.php
-// Login page matching your Figma/screenshot layout:
-// - full-bleed gradient background image (assets/gradient-auth.png)
-// - centered white card with left form and right large logo
-// - large logo on the right (assets/logo-large.png) — replace with your provided logo
-// - form posts to this page and uses lib/auth.php if present (MySQL-backed auth)
-// - card is scrollable when viewport is small so you don't need F11 to view everything
-//
-// Place this file in your web root alongside styles-login.css and the assets/ folder.
-// If you already have lib/auth.php + lib/db.php, this page will use them for authentication.
-
 session_start();
 
 if (file_exists(__DIR__ . '/lib/auth.php')) {
   require_once __DIR__ . '/lib/auth.php';
 } else {
-  // safe stubs so markup still works — replace with your real auth helpers
   function verify_csrf_token($t) { return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $t); }
   function csrf_token() { $_SESSION['csrf_token'] = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(24)); return $_SESSION['csrf_token']; }
   function get_user_by_email($email) { return null; }
@@ -40,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = get_user_by_email($email);
             if ($user && isset($user['password_hash']) && password_verify($password, $user['password_hash'])) {
                 if ($remember) {
-                  ini_set('session.cookie_lifetime', 60*60*24*30); // 30 days
+                  ini_set('session.cookie_lifetime', 60*60*24*30);
                 }
                 login_user((int)$user['id']);
                 header('Location: dashboard.php');
@@ -60,22 +49,15 @@ $csrf = csrf_token();
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Log in — IntelliPlan</title>
-
-  <!-- page styles for the login screen -->
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body class="auth-page">
 
-
-
-  <!-- Full-bleed gradient background: replace assets/gradient-auth.png with your gradient image -->
   <main class="auth-hero" role="main" aria-labelledby="login-title">
     <div class="auth-inner container">
 
-      <!-- White card. .auth-card-scroll makes the card scrollable when it is taller than viewport -->
       <div class="auth-card auth-card-scroll" role="region" aria-labelledby="login-title">
         <div class="auth-grid">
-          <!-- left: form -->
           <div class="auth-form-col">
             <a class="back-link" href="index.php" aria-label="Back to home">←</a>
 
@@ -132,11 +114,8 @@ $csrf = csrf_token();
             </form>
           </div>
 
-          <!-- right: VERY LARGE logo area -->
           <aside class="auth-visual-col" aria-hidden="false">
             <div class="logo-wrap">
-              <!-- REPLACE: assets/logo-large.png with the large logo you will provide
-                   The image is intentionally large to match your screenshot -->
               <img src="assets/logo.jpg" alt="IntelliPlan logo" class="logo-large logo-xlarge">
             </div>
           </aside>
@@ -147,22 +126,20 @@ $csrf = csrf_token();
   </main>
 
   <script>
-    // Toggle password visibility (closed eye = password hidden)
     function togglePassword(id, btn){
       const input = document.getElementById(id);
       if (!input) return;
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '👁️'; // Open eye when password visible
+        btn.textContent = '👁️';
         btn.setAttribute('aria-pressed','true');
       } else {
         input.type = 'password';
-        btn.textContent = '👁️‍🗨️'; // Closed eye when password hidden
+        btn.textContent = '👁️‍🗨️';
         btn.setAttribute('aria-pressed','false');
       }
     }
 
-    // Ensure the page can always scroll vertically (prevent accidental locking)
     document.documentElement.style.overflowY = 'auto';
     document.body.style.overflowY = 'auto';
   </script>

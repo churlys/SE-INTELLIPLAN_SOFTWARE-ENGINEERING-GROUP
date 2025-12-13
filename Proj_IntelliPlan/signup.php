@@ -2,7 +2,6 @@
 if (file_exists(__DIR__ . '/lib/auth.php')) {
   require_once __DIR__ . '/lib/auth.php';
 } else {
-  // If lib/auth.php is not present, define stubs so the page still renders.
   function csrf_token() { $_SESSION['csrf_token'] = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(24)); return $_SESSION['csrf_token']; }
   function verify_csrf_token($t) { return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $t); }
   function register_user($name,$email,$password){ return null; }
@@ -14,7 +13,6 @@ $name = '';
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // simple CSRF check
     if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid request. Please refresh and try again.';
     } else {
@@ -31,15 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$accept) $errors[] = 'You must agree to the terms & privacy policy.';
 
         if (empty($errors)) {
-            // register user (lib/auth.php should return inserted user id or null on failure)
             $user_id = register_user($name, $email, $password);
             if ($user_id) {
-                // log the user in and redirect to dashboard
                 login_user($user_id);
                 header('Location: dashboard.php');
                 exit;
             } else {
-                // registration failed (email exists or DB error)
                 $errors[] = 'Registration failed. An account with that email may already exist.';
             }
         }
@@ -59,7 +54,6 @@ $csrf = csrf_token();
 </head>
 <body class="auth-page">
 
- 
   <main class="auth-hero" role="main" aria-labelledby="signup-title">
     <div class="auth-inner container">
       
@@ -109,8 +103,6 @@ $csrf = csrf_token();
                 </div>
               </label>
 
-            
-
               <div class="form-actions">
                 <button class="btn-login" type="submit">Signup</button>
               </div>
@@ -119,7 +111,6 @@ $csrf = csrf_token();
 
               <div class="social-row">
                 <a class="social social-google" href="#" aria-label="Sign in with Google">
-                  
                   <span class="social-icon">G</span> Sign in with Google
                 </a>
                 <a class="social social-apple" href="#" aria-label="Sign in with Apple">
@@ -131,11 +122,8 @@ $csrf = csrf_token();
             </form>
           </div>
 
-          <!-- RIGHT: Logo / visual column -->
           <div class="auth-visual-col" aria-hidden="false">
             <div class="logo-wrap">
-              <!-- REPLACE: assets/logo-large.png with the big logo exported from Figma (SVG/PNG).
-                   The markup intentionally uses an <img> so you can swap in the exact art file. -->
               <img src="assets/logo.jpg" alt="IntelliPlan logo" class="logo-xlarge">
             </div>
           </div>
@@ -145,17 +133,16 @@ $csrf = csrf_token();
   </main>
 
   <script>
-    // Toggle password visibility (closed eye = password hidden)
     function togglePassword(id, btn){
       const input = document.getElementById(id);
       if (!input) return;
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '👁️'; // Open eye when password visible
+        btn.textContent = '👁️';
         btn.setAttribute('aria-pressed','true');
       } else {
         input.type = 'password';
-        btn.textContent = '👁️‍🗨️'; // Closed eye when password hidden
+        btn.textContent = '👁️‍🗨️';
         btn.setAttribute('aria-pressed','false');
       }
     }

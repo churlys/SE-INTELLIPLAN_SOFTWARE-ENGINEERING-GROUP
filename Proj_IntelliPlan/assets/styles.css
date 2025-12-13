@@ -1,9 +1,4 @@
-/* styles.css
-   Extended landing page for sections 1–5 with placeholders and comments where to replace images/text.
-   After you drop your Figma-exported images into assets/, replace the filenames below or change the src in index.php.
-*/
 
-/* -- VARIABLES -- */
 :root{
   --container-width: 1200px;
   --accent: #0b82ff;
@@ -12,7 +7,7 @@
   --panel-pale: #e8f5fb;
 }
 
-/* -- RESET & BASE -- */
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -22,7 +17,7 @@ body{
   background: var(--bg);
 }
 
-/* -- LAYOUT CONTAINER -- */
+
 .container{
   width:100%;
   max-width:var(--container-width);
@@ -30,7 +25,7 @@ body{
   padding:0 24px;
 }
 
-/* -- HEADER -- */
+
 .site-header{
   position:fixed;
   top:18px;
@@ -55,6 +50,7 @@ body{
   box-shadow: 0 12px 36px rgba(11,72,166,0.15);
   transform: translateY(-2px);
 }
+
 .btn-primary{border: 1px solid #111111; }
 .btn-primary:hover {
   background: #111111;
@@ -64,16 +60,22 @@ body{
   box-shadow: 0 12px 36px rgba(11,72,166,0.15);
   transform: translateY(-2px);
 }
-.btn-outline{ background:transparent; border:1px solid rgba(7,18,50,0.08); color:#071232; }
+.btn-outline{border: 1px solid #111111; }
 
-/* -- HERO (Section 1) -- */
+.btn-outline:hover{
+   background: #111111;
+  color: white;
+  cursor: pointer;
+    filter: brightness(1.08);
+  box-shadow: 0 12px 36px rgba(11,72,166,0.15);
+  transform: translateY(-2px);
+}
 .hero{
   position: relative;
   overflow: visible;
   min-height: 800px;
   padding: 110px 0 64px;
-  /* REPLACE background image with your Figma-exported gradient:
-     save it as assets/gradient.png and keep this reference */
+ 
   background-image: url('gradient.png');
   background-size: cover; background-position: center;
   border-bottom-left-radius: 28px;
@@ -82,7 +84,13 @@ body{
 .hero-overlay{ position:absolute; inset:0; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(250,252,255,0.02)); z-index:2; pointer-events:none; }
 .hero-inner{ position: relative; z-index:50; display:flex; gap:40px; align-items:center; padding-top:10px; padding-bottom:40px; }
 .hero-left{ flex:1; max-width:640px; color:#071232; }
-.kicker{ display:inline-block; background: rgba(255,255,255,0.9); padding:8px 12px; border-radius:999px; font-weight:700; font-size:13px; color:#0b2b4a; margin-bottom:18px; box-shadow: 0 6px 18px rgba(12,27,60,0.04); }
+.kicker{ display:inline-block; 
+  background: rgba(255,255,255,0.9);
+ padding:8px 12px; 
+ border-radius:999px; 
+ font-weight:700; 
+ font-size:13px; 
+ color:#0b2b4a; margin-bottom:18px; box-shadow: 0 6px 18px rgba(12,27,60,0.04); }
 .hero-title{ margin:0 0 18px 0; font-size:46px; line-height:1.02; letter-spacing:-0.6px; font-weight:800; }
 .hero-sub{ margin:0 0 22px 0; color:var(--muted); font-size:17px; max-width:620px; }
 .hero-ctas{ display:flex; gap:14px; margin-bottom:22px; align-items:center; }

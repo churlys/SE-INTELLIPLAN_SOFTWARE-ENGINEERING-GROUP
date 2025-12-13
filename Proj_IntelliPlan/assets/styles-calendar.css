@@ -1,12 +1,10 @@
-/* Replace or append — makes the calendar control bar use an image background
-   Put your exported image at assets/control-bg.png (or change the path below)
-*/
+
 
 .calendar-controls {
-  /* Fallback gradient first; the image will load on top of it */
+  
   background-image:
-    url('gradient.png'), /* top layer: your exported gradient image */
-    linear-gradient(135deg, #c9eeff 0%, #c9eeff 45%, #f0e9ff 100%); /* fallback */
+    url('gradient.png'), 
+    linear-gradient(135deg, #c9eeff 0%, #c9eeff 45%, #f0e9ff 100%); 
   background-size: cover, cover;
   background-position: center center, center center;
   background-repeat: no-repeat, no-repeat;
@@ -18,13 +16,12 @@
   justify-content:space-between;
   gap:12px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-  /* If the image is semi-transparent and you want the inner controls to pop,
-     you can add a subtle overlay using a pseudo-element (optional). */
+
   position: relative;
   overflow: hidden;
 }
 
-/* Optional overlay (uncomment if you want to slightly dim the image) */
+
 /*
 .calendar-controls::after {
   content: "";
@@ -35,7 +32,7 @@
 }
 */
 
-/* Make the centered date pill look like the design */
+
 .calendar-controls .date-pill {
   background: rgba(255,255,255,0.88);
   border-radius: 10px;
@@ -45,7 +42,7 @@
   box-shadow: 0 6px 18px rgba(8,30,65,0.04);
 }
 
-/* Buttons inside the control area keep their white pill look */
+
 .calendar-controls .control-btn,
 .calendar-controls .view-toggle .control-btn {
   background: rgba(255,255,255,0.95);
@@ -57,7 +54,6 @@
   cursor: pointer;
 }
 
-/* Keep responsive behavior */
 @media (max-width:900px){
   .calendar-controls { padding:10px; border-radius:10px; }
   .calendar-controls .date-pill { padding:6px 10px; font-size:13px; }

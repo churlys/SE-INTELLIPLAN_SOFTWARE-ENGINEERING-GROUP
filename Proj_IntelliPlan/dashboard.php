@@ -1,5 +1,5 @@
 <?php
-// dashboard_clone.php
+
 session_start();
 if (file_exists(__DIR__ . '/lib/auth.php')) {
     require_once __DIR__ . '/lib/auth.php';
@@ -20,27 +20,25 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
 </head>
 <body class="app-shell">
 
-  <!-- Sidebar (left) -->
+  
   <aside class="app-sidebar" aria-label="Primary navigation">
-    <!-- <div class="logo">
-      <a href="index.php"><img src="assets/logo.jpg" alt="IntelliPlan brand" onerror="this.style.display='none'"></a>
-      <span class="logo-text">IntelliPlan</span>
-    </div> -->
+   
 
     <nav class="nav" aria-label="Main">
       
-      <a class="nav-item " href="#" title="Dashboard">
-        <!-- <span class="ico">🏠</span> -->
+      <a class="nav-item " href="dashboard.php" title="Dashboard">
+   
         <span class="nav-text">Dashboard</span>
       </a>
       <a class="nav-item" href="calendar.php" title="Calendar">
-        <!-- <span class="ico">📅</span> -->
+      
         <span class="nav-text">Calendar</span>
       </a>
       <a class="nav-item" href="#" title="Activities">
-        <!-- <span class="ico">📚</span> -->
+      
         <span class="nav-text">Activities</span>
       </a>
+    </nav>
     
 
     <div class="sidebar-fills" aria-hidden="true">
@@ -65,7 +63,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
         </div>
 
         <div class="header-controls">
-          <button class="icon" title="Settings" aria-label="Settings">⚙️</button>
+          <!-- <button class="icon" title="Settings" aria-label="Settings">⚙️</button> -->
 
           <?php if (function_exists('csrf_token')): ?>
           <form action="logout.php" method="post" class="inline">
@@ -87,18 +85,16 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     <div class="container-inner">
       <!-- Main grid -->
       <div class="dashboard-wrap">
-        <!-- Left column -->
+    
         <section class="left-column">
-          <!-- Hero block -->
+       
           <div class="hero-block">
-            <!-- FIXED: gradient filename to gradient-hero.png -->
-            <div id="hero-left" class="hero-left" style="background-image: url('assets/gradient.png');">
-              <div class="kicker">0 task due today.</div>
+              <div id="hero-left" class="hero-left" style="background-image: url('assets/gradient.png');">
+              <div class="kicker">0 Task due today.</div>
               <h2 class="hero-title">GOOD AFTERNOON.</h2>
               <div class="hero-sub">Focus on your top tasks and schedule. Keep momentum going — you’ve got this.</div>
             </div>
-
-            <!-- Stopwatch widget (right of hero on large screens) -->
+           </div>
             <aside class="hero-right" aria-label="Stopwatch">
               <div class="timer-card">
                 <div class="timer-label">Stop Watch</div>
@@ -111,7 +107,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
             </aside>
           </div>
 
-          <!-- Stats -->
+     
           <div class="stats-row">
             <div class="stat-card">
               <div class="stat-top"><span class="emoji">👀</span><span class="label">Pending Tasks</span></div>
@@ -135,7 +131,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
             </div>
           </div>
 
-          <!-- Filters -->
+       
           <div class="filters-row">
             <div class="filter-card">
               <div class="filter-title">Classes</div>
@@ -163,7 +159,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
           </div>
         </section>
 
-        <!-- Right column -->
+   
         <aside class="right-column">
           <div class="small-calendar">
             <div class="small-cal-header">
@@ -181,7 +177,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
               <div class="day-chip">Sun 7</div>
             </div>
 
-            <!-- Visual hour grid (placeholder) -->
+            
             <div class="hour-grid">
               <div class="hour">1 AM</div>
               <div class="hour">2 AM</div>
@@ -202,7 +198,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </div>
   </main>
 
-  <!-- FIXED: JS filenames. Make sure these exist in assets/ -->
+ 
   <script src="assets/dashboard.js"></script>
  
 </body>
