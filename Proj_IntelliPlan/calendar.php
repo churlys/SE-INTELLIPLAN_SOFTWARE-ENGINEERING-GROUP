@@ -13,93 +13,92 @@ $now = new DateTime('now');
 function hourLabel(int $hour): string {
   return date('g A', mktime($hour, 0));
 }
+
+// Detect current page
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard — IntelliPlan (Clone)</title>
+  <title>Calendar — IntelliPlan</title>
 
   <link rel="stylesheet" href="assets/styles-dashboard.css">
+  <link rel="stylesheet" href="assets/calendarstyles.css">
+ 
 </head>
-<body class="app-shell">
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="assets/logo.jpg" alt="IntelliPlan Logo" style="width:100%;height:100%;object-fit:contain;" onerror="this.textContent='🎓'">
+      </div>
+      <div class="brand-name">IntelliPlan</div>
+    </div>
 
-  
-  <aside class="app-sidebar" aria-label="Primary navigation">
-   
-
-    <nav class="nav" aria-label="Main">
-      
-      <a class="nav-item " href="dashboard.php" title="Dashboard">
-   
-        <span class="nav-text">Dashboard</span>
+    <nav class="nav">
+      <a class="nav-item <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Dashboard</span>
       </a>
-      <a class="nav-item" href="calendar.php" title="Calendar">
-      
-        <span class="nav-text">Calendar</span>
+      <a class="nav-item <?php echo ($currentPage == 'calendar.php') ? 'active' : ''; ?>" href="calendar.php">
+        <span class="nav-icon">🗓️</span>
+        <span class="nav-label">Calendar</span>
       </a>
-      <a class="nav-item" href="#" title="Activities">
-      
-        <span class="nav-text">Activities</span>
+      <a class="nav-item <?php echo ($currentPage == 'activities.php') ? 'active' : ''; ?>" href="activities.php">
+        <span class="nav-icon">🧩</span>
+        <span class="nav-label">Activities</span>
+      </a>
+      <div class="nav-separator"></div>
+      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Log Out</span>
       </a>
     </nav>
-    
-
-    <div class="sidebar-fills" aria-hidden="true">
-      <div class="fill"></div>
-      <div class="fill"></div>
-      <div class="fill"></div>
-    </div>
   </aside>
 
-  <main class="app-main">
+  <main class="main">
+    <header class="topbar">
+      <div class="date-time">
+        <span class="time" id="liveTime">3:45 PM</span>
+        <span class="date" id="liveDate">Wednesday, December 3</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" aria-label="Settings">⚙️</button>
+        <button class="icon-btn" aria-label="Profile">👤</button>
+    
+        <div class="user-chip"><?php echo htmlspecialchars($user['email']); ?></div>
+      </div>
+    </header>
     <div class="container-inner">
-      <header class="top-header" role="banner">
-        <div class="brand-time">
-          <img src="assets/logo.jpg" alt="IntelliPlan" class="brand-logo" onerror="this.style.display='none'">
-          <span class="logo-text">IntelliPlan</span>
-          <div class="time-wrap">
-            <div class="clock" id="clock">3:45 PM</div>
-            <div class="clock-sub" id="date-sub">Wednesday, December 3</div>
+      <div class="calendar-shell">
+        <div class="cal-header-row">
+          <div>
+            <div class="cal-title">Calendar</div>
+            <div class="cal-range" id="calRange">This week</div>
+          </div>
+          <div class="cal-controls">
+            <button class="cal-btn" id="prevBtn" aria-label="Previous">‹</button>
+            <button class="cal-btn" id="todayBtn">Today</button>
+            <button class="cal-btn" id="nextBtn" aria-label="Next">›</button>
+            <div class="cal-mode">
+              <button class="mode-btn active" data-mode="week" id="modeWeek">Week</button>
+              <button class="mode-btn" data-mode="month" id="modeMonth">Month</button>
+            </div>
           </div>
         </div>
 
-        <div class="header-controls">
-          <?php if (function_exists('csrf_token')): ?>
-          <form action="logout.php" method="post" class="inline">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
-            <button class="btn-ghost" type="submit">Log out</button>
-          </form>
-          <?php else: ?>
-          <a class="btn-ghost" href="index.php">Home</a>
-          <?php endif; ?>
-
-          <div class="user-chip">
-            <img src="assets/avatar.png" alt="avatar" class="avatar" onerror="this.style.display='none'">
-            <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
-          </div>
-        </div>
-      </header>
-    </div>
-
-    <div class="container-inner">
-      <div class="calendar-view">
-            <div style="display:flex; align-items:center;">
-              <div class="day-label"><?php echo strtoupper($now->format('D')); ?></div>
-              <div class="date-badge"><?php echo $now->format('j'); ?></div>
-            </div>
-
-            <div class="calendar-grid">
-              <?php for ($h = 1; $h <= 23; $h++): ?>
-                <div class="hour-row">
-                  <div class="hour-label"><?php echo hourLabel($h); ?></div>
-                  <div class="hour-cell"></div>
-                </div>
-              <?php endfor; ?>
-            </div>
+        <div id="weekView" class="week-view"></div>
+        <div id="monthView" class="month-view" hidden></div>
       </div>
     </div>
     </main>
-</body>
-</html>
+    <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+    </form>
+    <script src="assets/dashboard.js"></script>
+    <script src="assets/calendar.js"></script>
+    
+  </body>
+  </html>

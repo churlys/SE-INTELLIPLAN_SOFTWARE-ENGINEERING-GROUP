@@ -1,205 +1,235 @@
 <?php
-
 session_start();
 if (file_exists(__DIR__ . '/lib/auth.php')) {
-    require_once __DIR__ . '/lib/auth.php';
-    if (function_exists('require_auth')) require_auth();
-    $user = function_exists('current_user') ? current_user() : null;
+  require_once __DIR__ . '/lib/auth.php';
+  if (function_exists('require_auth')) require_auth();
+  $user = function_exists('current_user') ? current_user() : null;
 } else {
-    $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
+  $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
 }
+
+date_default_timezone_set('UTC');
+$now = new DateTime('now');
+function hourLabel(int $hour): string {
+  return date('g A', mktime($hour, 0));
+}
+
+// Detect current page
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard — IntelliPlan (Clone)</title>
-
-  <link rel="stylesheet" href="assets/styles-dashboard.css">
-</head>
-<body class="app-shell">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IntelliPlan Dashboard</title>
+  <link rel="stylesheet" href="assets/styles-dashboard.css" />
   
-  <aside class="app-sidebar" aria-label="Primary navigation">
-   
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="assets/logo.jpg" alt="IntelliPlan Logo" style="width:100%;height:100%;object-fit:contain;" onerror="this.textContent='🎓'">
+      </div>
+      <div class="brand-name">IntelliPlan</div>
+    </div>
 
-    <nav class="nav" aria-label="Main">
-      
-      <a class="nav-item " href="dashboard.php" title="Dashboard">
-   
-        <span class="nav-text">Dashboard</span>
+    <nav class="nav">
+      <a class="nav-item <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Dashboard</span>
       </a>
-      <a class="nav-item" href="calendar.php" title="Calendar">
-      
-        <span class="nav-text">Calendar</span>
+      <a class="nav-item <?php echo ($currentPage == 'calendar.php') ? 'active' : ''; ?>" href="calendar.php">
+        <span class="nav-icon">🗓️</span>
+        <span class="nav-label">Calendar</span>
       </a>
-      <a class="nav-item" href="#" title="Activities">
-      
-        <span class="nav-text">Activities</span>
+      <a class="nav-item <?php echo ($currentPage == 'activities.php') ? 'active' : ''; ?>" href="activities.php">
+        <span class="nav-icon">🧩</span>
+        <span class="nav-label">Activities</span>
+      </a>
+      <div class="nav-separator"></div>
+      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Log Out</span>
       </a>
     </nav>
-    
-
-    <div class="sidebar-fills" aria-hidden="true">
-      <div class="fill"></div>
-      <div class="fill"></div>
-      <div class="fill"></div>
-    </div>
   </aside>
 
-  <!-- Main -->
-  <main class="app-main">
-    <div class="container-inner">
-      <!-- Top header -->
-      <header class="top-header" role="banner">
-        <div class="brand-time">
-          <img src="assets/logo.jpg" alt="IntelliPlan" class="brand-logo" onerror="this.style.display='none'">
-           <span class="logo-text">IntelliPlan</span>
-          <div class="time-wrap">
-            <div class="clock" id="clock">3:45 PM</div>
-            <div class="clock-sub" id="date-sub">Wednesday, December 3</div>
-          </div>
-        </div>
+  <main class="main">
+    <header class="topbar">
+      <div class="date-time">
+        <span class="time" id="liveTime">3:45 PM</span>
+        <span class="date" id="liveDate">Wednesday, December 3</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" aria-label="Settings">⚙️</button>
+        <button class="icon-btn" aria-label="Profile">👤</button>
+        <div class="user-chip"><?php echo htmlspecialchars($user['email']); ?></div>
+      </div>
+    </header>
 
-        <div class="header-controls">
-          <!-- <button class="icon" title="Settings" aria-label="Settings">⚙️</button> -->
-
-          <?php if (function_exists('csrf_token')): ?>
-          <form action="logout.php" method="post" class="inline">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
-            <button class="btn-ghost" type="submit">Log out</button>
-          </form>
-          <?php else: ?>
-          <a class="btn-ghost" href="index.php">Home</a>
-          <?php endif; ?>
-
-          <div class="user-chip">
-            <img src="assets/avatar.png" alt="avatar" class="avatar" onerror="this.style.display='none'">
-            <span><?php echo htmlspecialchars($user['email'] ?? $user['name'] ?? 'User'); ?></span>
-          </div>
-        </div>
-      </header>
-    </div>
-
-    <div class="container-inner">
-      <!-- Main grid -->
-      <div class="dashboard-wrap">
-    
-        <section class="left-column">
-       
-          <div class="hero-block">
-              <div id="hero-left" class="hero-left" style="background-image: url('assets/gradient.png');">
-              <div class="kicker">0 Task due today.</div>
-              <h2 class="hero-title">GOOD AFTERNOON.</h2>
-              <div class="hero-sub">Focus on your top tasks and schedule. Keep momentum going — you’ve got this.</div>
-            </div>
-           </div>
-            <aside class="hero-right" aria-label="Stopwatch">
-              <div class="timer-card">
-                <div class="timer-label">Stop Watch</div>
-                <div class="timer-big" id="timer">25:00</div>
-                <div class="timer-cta">
-                  <button class="btn" aria-label="Start">▶</button>
-                  <button class="btn-ghost" aria-label="Pause">⏸</button>
+    <section class="content">
+      <div class="grid">
+        <!-- Focus Card and Stats -->
+        <div class="focus-and-stats">
+          <div class="focus-card">
+            <div class="focus-card-inner">
+              <div class="focus-info">
+                <p class="muted">0 task due today.</p>
+                <h2>GOOD AFTERNOON.</h2>
+              </div>
+              <div class="focus-timer">
+                <div class="timer-ring" id="timerRing" aria-label="Pomodoro progress">
+                  <div class="timer-circle">
+                    <div class="timer-label" id="timerLabel">25:00</div>
+                  </div>
+                </div>
+                <div class="timer-controls">
+                  <button class="circle-btn" id="btnStartPause" aria-label="Start">▶</button>
+                  <button class="circle-btn" id="btnReset" aria-label="Reset">↺</button>
                 </div>
               </div>
-            </aside>
+            </div>
           </div>
 
-     
           <div class="stats-row">
             <div class="stat-card">
-              <div class="stat-top"><span class="emoji">👀</span><span class="label">Pending Tasks</span></div>
-              <div class="value">0</div>
-              <div class="muted">Last 7 days</div>
+              <div class="stat-head">
+                <span class="stat-icon">📌</span>
+                <span class="stat-title">Pending Tasks</span>
+              </div>
+              <div class="stat-value" id="statPending">0</div>
+              <div class="stat-sub">Last 7 days</div>
             </div>
             <div class="stat-card">
-              <div class="stat-top"><span class="emoji">⚠️</span><span class="label">Overdue Tasks</span></div>
-              <div class="value">0</div>
-              <div class="muted">Last 7 days</div>
+              <div class="stat-head">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-title">Overdue Tasks</span>
+              </div>
+              <div class="stat-value" id="statOverdue">0</div>
+              <div class="stat-sub">Last 7 days</div>
             </div>
             <div class="stat-card">
-              <div class="stat-top"><span class="emoji">👍</span><span class="label">Tasks Completed</span></div>
-              <div class="value">0</div>
-              <div class="muted">Last 7 days</div>
+              <div class="stat-head">
+                <span class="stat-icon">✅</span>
+                <span class="stat-title">Tasks Completed</span>
+              </div>
+              <div class="stat-value" id="statCompleted">0</div>
+              <div class="stat-sub">Last 7 days</div>
             </div>
             <div class="stat-card">
-              <div class="stat-top"><span class="emoji">🔥</span><span class="label">Your Streak</span></div>
-              <div class="value">0</div>
-              <div class="muted">Last 7 days</div>
+              <div class="stat-head">
+                <span class="stat-icon">🔥</span>
+                <span class="stat-title">Your Streak</span>
+              </div>
+              <div class="stat-value" id="statStreak">0</div>
+              <div class="stat-sub">Last 7 days</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar -->
+        <aside class="calendar-card">
+          <div class="calendar-header">
+            <span>Calendar</span>
+            <div class="select-wrap">
+              <button class="pill">Day</button>
             </div>
           </div>
 
-       
-          <div class="filters-row">
-            <div class="filter-card">
-              <div class="filter-title">Classes</div>
-              <div class="filter-controls">
-                <select aria-label="Select subject"><option>Select Subject</option></select>
-                <select aria-label="Range"><option>Current</option></select>
-              </div>
+          <div class="calendar-week">
+            <div class="weekday">
+              <div class="wd-name">Mon</div>
+              <button class="wd-day">1</button>
             </div>
-
-            <div class="filter-card">
-              <div class="filter-title">Tasks</div>
-              <div class="filter-controls">
-                <select><option>Select Subject</option></select>
-                <select><option>Current</option></select>
-              </div>
+            <div class="weekday">
+              <div class="wd-name">Tue</div>
+              <button class="wd-day">2</button>
             </div>
-
-            <div class="filter-card">
-              <div class="filter-title">Exams</div>
-              <div class="filter-controls">
-                <select><option>Select Subject</option></select>
-                <select><option>Current</option></select>
-              </div>
+            <div class="weekday active">
+              <div class="wd-name">Wed</div>
+              <button class="wd-day">3</button>
+            </div>
+            <div class="weekday">
+              <div class="wd-name">Thu</div>
+              <button class="wd-day">4</button>
+            </div>
+            <div class="weekday">
+              <div class="wd-name">Fri</div>
+              <button class="wd-day">5</button>
+            </div>
+            <div class="weekday">
+              <div class="wd-name">Sat</div>
+              <button class="wd-day">6</button>
+            </div>
+            <div class="weekday">
+              <div class="wd-name">Sun</div>
+              <button class="wd-day">7</button>
             </div>
           </div>
-        </section>
 
-   
-        <aside class="right-column">
-          <div class="small-calendar">
-            <div class="small-cal-header">
-              <strong>Calendar</strong>
-              <select class="input"><option>Day</option><option>Week</option><option>Month</option></select>
-            </div>
-
-            <div class="day-chips">
-              <div class="day-chip">Mon 1</div>
-              <div class="day-chip">Tue 2</div>
-              <div class="day-chip active">Wed 3</div>
-              <div class="day-chip">Thu 4</div>
-              <div class="day-chip">Fri 5</div>
-              <div class="day-chip">Sat 6</div>
-              <div class="day-chip">Sun 7</div>
-            </div>
-
-            
-            <div class="hour-grid">
+          <div class="calendar-hours">
+            <div class="hour-row">
               <div class="hour">1 AM</div>
-              <div class="hour">2 AM</div>
-              <div class="hour">3 AM</div>
-              <div class="hour">4 AM</div>
-              <div class="hour">5 AM</div>
-              <div class="hour">6 AM</div>
-              <div class="hour">7 AM</div>
             </div>
-          </div>
-
-          <div class="small-calendar">
-            <strong>Quick actions</strong>
-            <div class="muted" style="margin-top:8px">Create a new event, task or reminder.</div>
+            <div class="hour-row">
+              <div class="hour">2 AM</div>
+            </div>
+            <div class="hour-row">
+              <div class="hour">3 AM</div>
+            </div>
+            <div class="hour-row">
+              <div class="hour">4 AM</div>
+            </div>
+            <div class="hour-row">
+              <div class="hour">5 AM</div>
+            </div>
           </div>
         </aside>
       </div>
-    </div>
+
+      <!-- Bottom Row: Classes, Tasks, Exams -->
+      <div class="bottom-row">
+        <div class="panel">
+          <div class="panel-head">
+            <span>Classes</span>
+            <div class="panel-filters">
+              <div class="select">Select Subject</div>
+              <div class="select">Current</div>
+            </div>
+          </div>
+          <div class="panel-body muted">No classes to display.</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span>Tasks</span>
+            <div class="panel-filters">
+              <div class="select">Select Subject</div>
+              <div class="select">Current</div>
+            </div>
+          </div>
+          <div class="panel-body muted">No tasks to display.</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span>Exams</span>
+            <div class="panel-filters">
+              <div class="select">Select Subject</div>
+              <div class="select">Current</div>
+            </div>
+          </div>
+          <div class="panel-body muted">No exams to display.</div>
+        </div>
+      </div>
+    </section>
   </main>
 
- 
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+  </form>
   <script src="assets/dashboard.js"></script>
- 
 </body>
 </html>

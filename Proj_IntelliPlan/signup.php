@@ -20,13 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $password2 = $_POST['password2'] ?? '';
-        $accept = isset($_POST['accept']);
 
         if ($name === '') $errors[] = 'Please enter your name.';
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
         if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters.';
         if ($password !== $password2) $errors[] = 'Passwords do not match.';
-        if (!$accept) $errors[] = 'You must agree to the terms & privacy policy.';
 
         if (empty($errors)) {
             $user_id = register_user($name, $email, $password);
