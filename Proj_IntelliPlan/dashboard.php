@@ -23,6 +23,8 @@ function hourLabel(int $hour): string {
 
 // Detect current page
 $currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,18 +53,18 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <span class="nav-icon">🗓️</span>
         <span class="nav-label">Calendar</span>
       </a>
-      <div class="nav-item dropdown-wrapper">
-        <button class="nav-item dropdown-btn" aria-label="Activities menu" aria-expanded="false">
+      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
+        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
           <span class="nav-icon">🧩</span>
           <span class="nav-label">Activities</span>
           <span class="dropdown-arrow">▼</span>
-        </button>
-        <div class="dropdown-menu" hidden>
-          <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exam.php" class="dropdown-item">📝 Exams</a>
-          <a href="classes.php" class="dropdown-item">🎓 Classes</a>
+        </summary>
+        <div class="subnav">
+          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
+          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
+          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
         </div>
-      </div>
+      </details>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
         <span class="nav-icon">🚪</span>

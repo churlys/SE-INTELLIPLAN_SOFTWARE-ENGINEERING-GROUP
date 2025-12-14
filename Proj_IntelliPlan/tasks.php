@@ -14,6 +14,10 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
 } else {
   $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
 }
+
+$currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!doctype html>
 <html lang="en">
@@ -30,9 +34,20 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
       <div class="brand-name">IntelliPlan</div>
     </div>
     <nav class="nav">
-      <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
-      <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
-      <a class="nav-item active" href="tasks.php"><span class="nav-icon">📋</span><span class="nav-label">Tasks</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'calendar.php') ? 'active' : ''; ?>" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
+      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
+        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
+          <span class="nav-icon">🧩</span>
+          <span class="nav-label">Activities</span>
+          <span class="dropdown-arrow">▼</span>
+        </summary>
+        <div class="subnav">
+          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
+          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
+          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
+        </div>
+      </details>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
     </nav>
@@ -55,7 +70,11 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </section>
   </main>
 
-  <form id="logoutForm" method="POST" action="logout.php" style="display:none;"></form>
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <?php if (function_exists('csrf_token')): ?>
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+    <?php endif; ?>
+  </form>
 
   <script>
     // Load current date/time
