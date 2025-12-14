@@ -59,7 +59,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </button>
         <div class="dropdown-menu" hidden>
           <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exams.php" class="dropdown-item">📝 Exams</a>
+          <a href="exam.php" class="dropdown-item">📝 Exams</a>
           <a href="classes.php" class="dropdown-item">🎓 Classes</a>
         </div>
       </div>
@@ -230,7 +230,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
         <div class="panel">
           <div class="panel-head">
-            <a href="exams.php" class="panel-title">Exams</a>
+            <a href="exam.php" class="panel-title">Exams</a>
             <div class="panel-filters">
               <div class="select">Select Subject</div>
               <div class="select">Current</div>
