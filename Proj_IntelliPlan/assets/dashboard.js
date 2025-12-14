@@ -108,3 +108,49 @@ document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
   renderTimer();
 });
+
+// ===== Dropdown click-to-toggle behavior (no hover) =====
+(function () {
+  function closeAllDropdowns() {
+    document.querySelectorAll('.dropdown-wrapper.open').forEach(wrapper => {
+      wrapper.classList.remove('open');
+      const btn = wrapper.querySelector('.dropdown-btn');
+      const menu = wrapper.querySelector('.dropdown-menu');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+      if (menu) menu.hidden = true;
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.dropdown-btn');
+    if (btn) {
+      const wrapper = btn.closest('.dropdown-wrapper');
+      if (!wrapper) return;
+      const menu = wrapper.querySelector('.dropdown-menu');
+      const isOpen = wrapper.classList.contains('open');
+      // close others
+      closeAllDropdowns();
+      if (!isOpen) {
+        wrapper.classList.add('open');
+        btn.classList.add('active');
+        btn.setAttribute('aria-expanded', 'true');
+        if (menu) menu.hidden = false;
+      }
+      e.preventDefault();
+      return;
+    }
+
+    // Click outside — close all
+    if (!e.target.closest('.dropdown-wrapper')) {
+      closeAllDropdowns();
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAllDropdowns();
+  });
+})();

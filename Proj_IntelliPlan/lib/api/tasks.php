@@ -1,7 +1,14 @@
 <?php
 // api/tasks.php
 // JSON API for tasks (GET list, POST create, PUT update, DELETE).
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionDir = sys_get_temp_dir();
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    session_save_path($sessionDir);
+    session_start();
+}
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../lib/db.php';

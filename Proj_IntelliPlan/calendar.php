@@ -1,5 +1,12 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionDir = sys_get_temp_dir();
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    session_save_path($sessionDir);
+    session_start();
+}
 if (file_exists(__DIR__ . '/lib/auth.php')) {
   require_once __DIR__ . '/lib/auth.php';
   if (function_exists('require_auth')) require_auth();
@@ -46,10 +53,18 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <span class="nav-icon">🗓️</span>
         <span class="nav-label">Calendar</span>
       </a>
-      <a class="nav-item <?php echo ($currentPage == 'activities.php') ? 'active' : ''; ?>" href="activities.php">
-        <span class="nav-icon">🧩</span>
-        <span class="nav-label">Activities</span>
-      </a>
+      <div class="nav-item dropdown-wrapper">
+        <button class="nav-item dropdown-btn" aria-label="Activities menu" aria-expanded="false">
+          <span class="nav-icon">🧩</span>
+          <span class="nav-label">Activities</span>
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <div class="dropdown-menu" hidden>
+          <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
+          <a href="exam.php" class="dropdown-item">📝 Exams</a>
+          <a href="classes.php" class="dropdown-item">🎓 Classes</a>
+        </div>
+      </div>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
         <span class="nav-icon">🚪</span>
@@ -99,6 +114,51 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </form>
     <script src="assets/dashboard.js"></script>
     <script src="assets/calendar.js"></script>
+    <script>
+      (function(){
+        const dropdownBtns = document.querySelectorAll('.dropdown-btn');
+        
+        dropdownBtns.forEach(btn => {
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            const wrapper = this.closest('.dropdown-wrapper');
+            const menu = wrapper.querySelector('.dropdown-menu');
+            const isHidden = menu.hasAttribute('hidden');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
+              if (otherBtn !== btn) {
+                otherBtn.classList.remove('active');
+                otherBtn.setAttribute('aria-expanded', 'false');
+                otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
+              }
+            });
+            
+            // Toggle current dropdown
+            if (isHidden) {
+              menu.removeAttribute('hidden');
+              btn.classList.add('active');
+              btn.setAttribute('aria-expanded', 'true');
+            } else {
+              menu.setAttribute('hidden', '');
+              btn.classList.remove('active');
+              btn.setAttribute('aria-expanded', 'false');
+            }
+          });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e){
+          if (!e.target.closest('.dropdown-wrapper')) {
+            dropdownBtns.forEach(btn => {
+              btn.classList.remove('active');
+              btn.setAttribute('aria-expanded', 'false');
+              btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
+            });
+          }
+        });
+      })();
+    </script>
     
   </body>
   </html>

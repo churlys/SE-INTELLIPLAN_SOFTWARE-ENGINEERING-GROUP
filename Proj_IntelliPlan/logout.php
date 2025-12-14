@@ -1,5 +1,12 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionDir = sys_get_temp_dir();
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    session_save_path($sessionDir);
+    session_start();
+}
 
 require_once __DIR__ . '/lib/auth.php';
 

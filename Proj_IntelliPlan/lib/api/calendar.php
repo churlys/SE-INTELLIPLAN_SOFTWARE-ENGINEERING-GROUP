@@ -3,7 +3,14 @@
 // JSON API for calendar events (GET, POST, PUT, DELETE).
 // Requires session auth and lib/db.php, lib/auth.php with require_auth() and current_user().
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    $sessionDir = sys_get_temp_dir();
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    session_save_path($sessionDir);
+    session_start();
+}
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../lib/db.php';
