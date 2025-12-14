@@ -208,12 +208,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <div class="bottom-row">
         <div class="panel">
           <div class="panel-head">
-            <span>Classes</span>
-            <div class="panel-filters">
-              <div class="select">Select Subject</div>
-              <div class="select">Current</div>
+              <a href="classes.php" class="panel-title">Classes</a>
+              <div class="panel-filters">
+                <div class="select">Select Subject</div>
+                <div class="select">Current</div>
+              </div>
             </div>
-          </div>
           <div class="panel-body muted">No classes to display.</div>
         </div>
 
@@ -230,7 +230,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
         <div class="panel">
           <div class="panel-head">
-            <span>Exams</span>
+            <a href="exams.php" class="panel-title">Exams</a>
             <div class="panel-filters">
               <div class="select">Select Subject</div>
               <div class="select">Current</div>
