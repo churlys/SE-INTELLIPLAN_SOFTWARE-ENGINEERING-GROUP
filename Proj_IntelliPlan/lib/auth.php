@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Ensure PHP uses a valid session save path before starting sessions.
+    // Use the system temp directory which should exist (avoids missing C:\xampp\tmps errors).
+    $sessionDir = sys_get_temp_dir();
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    session_save_path($sessionDir);
     session_start();
 }
 
