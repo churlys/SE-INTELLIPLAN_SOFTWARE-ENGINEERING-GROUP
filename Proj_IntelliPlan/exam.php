@@ -20,7 +20,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Classes — IntelliPlan</title>
+  <title>Exams — IntelliPlan</title>
   <link rel="stylesheet" href="assets/styles-dashboard.css">
 </head>
 <body>
@@ -32,7 +32,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     <nav class="nav">
       <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
-      <a class="nav-item active" href="classes.php"><span class="nav-icon">🎓</span><span class="nav-label">Classes</span></a>
+      <a class="nav-item active" href="exam.php"><span class="nav-icon">📝</span><span class="nav-label">Exams</span></a>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
     </nav>
@@ -48,9 +48,9 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </header>
 
     <section class="content">
-      <h2>Classes</h2>
+      <h2>Exams</h2>
       <div class="panel">
-        <div id="classList" class="panel-body muted">No classes to display.</div>
+        <div id="examsList" class="panel-body muted">No exams to display.</div>
       </div>
     </section>
   </main>

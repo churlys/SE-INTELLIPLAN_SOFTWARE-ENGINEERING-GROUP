@@ -61,7 +61,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </button>
         <div class="dropdown-menu" hidden>
           <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exams.php" class="dropdown-item">📝 Exams</a>
+          <a href="exam.php" class="dropdown-item">📝 Exams</a>
           <a href="classes.php" class="dropdown-item">🎓 Classes</a>
         </div>
       </div>
