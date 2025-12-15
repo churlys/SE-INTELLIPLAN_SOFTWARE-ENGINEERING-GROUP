@@ -102,6 +102,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                   <span class="tasks-label">Due Date</span>
                   <input id="taskDue" type="date">
                 </label>
+                <label class="tasks-field">
+                  <span class="tasks-label">Due Time</span>
+                  <input id="taskDueTime" type="time">
+                </label>
                 <label class="tasks-field tasks-field-full">
                   <span class="tasks-label">Details</span>
                   <textarea id="taskDetails" rows="3" placeholder="Optional details"></textarea>
@@ -234,6 +238,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
               details: t.details ?? null,
               subject: t.subject ?? null,
               due_date: t.due_date ?? null,
+              due_time: t.due_time ?? null,
               status: nextStatus,
             });
             await refreshTasks();
@@ -252,6 +257,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         const parts = [];
         if (t.subject) parts.push(t.subject);
         if (t.due_date) parts.push(t.due_date);
+        if (t.due_time) parts.push(t.due_time);
         meta.textContent = parts.join(' • ');
         main.appendChild(title);
         if (parts.length) main.appendChild(meta);
@@ -375,6 +381,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       const title = document.getElementById('taskTitle')?.value?.trim() || '';
       const subject = document.getElementById('taskSubject')?.value?.trim() || '';
       const due = document.getElementById('taskDue')?.value || null;
+      const dueTime = document.getElementById('taskDueTime')?.value || null;
       const details = document.getElementById('taskDetails')?.value?.trim() || '';
 
       if (!title) {
@@ -388,6 +395,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           title,
           subject: subject || null,
           due_date: due || null,
+          due_time: dueTime || null,
           details: details || null,
         });
         addTaskForm.reset();

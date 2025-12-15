@@ -85,7 +85,7 @@
         const due = (t?.due_date || '').trim();
         if (!due) return false;
         const status = (t?.status || 'open').toLowerCase();
-        if (status === 'done') return false;
+        if (status === 'done' || status === 'archived') return false;
         return due >= startIso && due <= endIso;
       });
     }
@@ -109,15 +109,21 @@
     function normalizeTaskEvents(tasks){
       return tasks.map(t => {
         const due = (t?.due_date || '').trim();
-        const start = due ? new Date(due + 'T00:00:00') : null;
+        const dueTime = (t?.due_time || '').trim();
+        const start = due
+          ? new Date(due + 'T' + (dueTime ? (dueTime.length === 5 ? (dueTime + ':00') : dueTime) : '00:00:00'))
+          : null;
+        const subject = (t?.subject || '').trim();
+        const title = (t?.title || 'Task').trim();
         return {
           id: `task:${t?.id ?? ''}`,
-          title: t?.title || 'Task',
+          title,
           start,
           end: null,
           allDay: true,
-          description: '',
+          description: subject,
           source: 'task',
+          dueTime: dueTime || null,
         };
       }).filter(e => e.start instanceof Date && !isNaN(e.start));
     }
@@ -126,16 +132,22 @@
       const key = `${formatDate(rangeStart)}..${formatDate(rangeEnd)}`;
       if (key === lastFetchKey) return;
       lastFetchKey = key;
+      let calendarPart = [];
+      let taskPart = [];
       try {
-        const [raw, tasks] = await Promise.all([
-          fetchEvents(rangeStart, rangeEnd),
-          fetchTasks(rangeStart, rangeEnd),
-        ]);
-        events = [...normalizeEvents(raw), ...normalizeTaskEvents(tasks)];
+        const raw = await fetchEvents(rangeStart, rangeEnd);
+        calendarPart = normalizeEvents(raw);
       } catch (err) {
-        // Fail soft: render empty calendar if API fails.
-        events = [];
+        calendarPart = [];
       }
+      try {
+        const tasks = await fetchTasks(rangeStart, rangeEnd);
+        taskPart = normalizeTaskEvents(tasks);
+      } catch (err) {
+        taskPart = [];
+      }
+
+      events = [...calendarPart, ...taskPart];
     }
 
     function eventsForIsoDay(iso){
@@ -145,7 +157,7 @@
     }
 
     function formatTimeRange(ev){
-      if (ev.source === 'task') return 'Due';
+      if (ev.source === 'task') return ev.dueTime ? `Due ${ev.dueTime}` : 'Due';
       if (ev.allDay) return 'All day';
       const start = ev.start;
       const end = ev.end;
@@ -194,7 +206,9 @@
         const dayEvents = eventsForIsoDay(d.iso);
         const items = dayEvents.length ? dayEvents.map(ev => {
           const time = formatTimeRange(ev);
-          return `<div class="event-chip"><strong>${escapeHtml(ev.title)}</strong><span>${escapeHtml(time)}</span></div>`;
+          const cls = ev.source === 'task' ? 'event-chip task' : 'event-chip';
+          const meta = ev.source === 'task' && ev.description ? `<span>${escapeHtml(time)} • ${escapeHtml(ev.description)}</span>` : `<span>${escapeHtml(time)}</span>`;
+          return `<div class="${cls}"><strong>${escapeHtml(ev.title)}</strong>${meta}</div>`;
         }).join('') : '<div class="event-chip" style="opacity:0.6;">No events</div>';
         return `<div class="day-column"><h4>${d.label}</h4>${items}</div>`;
       }).join('')}</div>`;
@@ -240,7 +254,11 @@
 
       monthView.innerHTML = `<div class="month-grid">${cells.map(cell => {
         if (cell.empty) return '<div class="month-cell" aria-hidden="true"></div>';
-        const eventsHtml = cell.events.map(ev => `<div class="event-line"><span class="event-dot"></span><span>${escapeHtml(ev.title)}</span></div>`).join('');
+        const eventsHtml = cell.events.map(ev => {
+          const dotCls = ev.source === 'task' ? 'event-dot task' : 'event-dot';
+          const lineCls = ev.source === 'task' ? 'event-line task' : 'event-line';
+          return `<div class="${lineCls}"><span class="${dotCls}"></span><span>${escapeHtml(ev.title)}</span></div>`;
+        }).join('');
         return `<div class="month-cell ${cell.isToday ? 'today' : ''}"><div class="date">${cell.date}</div>${eventsHtml}</div>`;
       }).join('')}</div>`;
     };
