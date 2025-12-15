@@ -8,7 +8,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
   $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
 }
 
-date_default_timezone_set('UTC');
+date_default_timezone_set('UTC');  
 $now = new DateTime('now');
 function hourLabel(int $hour): string {
   return date('g A', mktime($hour, 0));
