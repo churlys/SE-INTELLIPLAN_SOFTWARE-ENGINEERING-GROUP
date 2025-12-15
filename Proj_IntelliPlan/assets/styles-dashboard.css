@@ -462,6 +462,9 @@ select.select:focus {
 
 .nav-activities > summary {
   list-style: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .nav-activities > summary::-webkit-details-marker {
@@ -654,6 +657,9 @@ select.select:focus {
   border-radius: var(--radius);
   padding: 14px 16px;
   box-shadow: 0 0 0 1px var(--border) inset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .task-left {
@@ -689,6 +695,36 @@ select.select:focus {
   font-size: 13px;
   font-weight: 600;
 }
+
+.task-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-delete {
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  padding: 6px;
+  font-size: 16px;
+  color: var(--danger);
+  border: 1px solid var(--border);
+  transition: background .12s ease, transform .06s ease;
+}
+
+.task-delete:hover {
+  background: rgba(239,68,68,0.06);
+  transform: translateY(-1px);
+}
+
+.task-delete svg { width: 16px; height: 16px; }
 
 .tasks-add {
   margin-bottom: 14px;
