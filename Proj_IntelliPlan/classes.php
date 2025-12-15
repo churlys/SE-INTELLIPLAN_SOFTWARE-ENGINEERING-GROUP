@@ -36,9 +36,23 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     <nav class="nav">
       <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
-      <a class="nav-item active" href="classes.php"><span class="nav-icon">🎓</span><span class="nav-label">Classes</span></a>
+      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
+        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
+          <span class="nav-icon">🧩</span>
+          <span class="nav-label">Activities</span>
+          <span class="dropdown-arrow">▼</span>
+        </summary>
+        <div class="subnav">
+          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
+          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
+          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
+        </div>
+      </details>
       <div class="nav-separator"></div>
-      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
+      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
+        <span class="nav-icon">🚪</span>
+        <span class="nav-label">Log Out</span>
+      </a>
     </nav>
   </aside>
 
@@ -70,43 +84,8 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     document.getElementById('liveTime').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
     document.getElementById('liveDate').textContent = new Date().toLocaleDateString(undefined, {weekday: 'long', month: 'long', day: 'numeric'});
 
-    // Dropdown toggle functionality
-    (function(){
-      const dropdownBtns = document.querySelectorAll('.dropdown-btn');
-      dropdownBtns.forEach(btn => {
-        btn.addEventListener('click', function(e){
-          e.preventDefault();
-          const wrapper = this.closest('.dropdown-wrapper');
-          const menu = wrapper.querySelector('.dropdown-menu');
-          const isHidden = menu.hasAttribute('hidden');
-          document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
-            if (otherBtn !== btn) {
-              otherBtn.classList.remove('active');
-              otherBtn.setAttribute('aria-expanded', 'false');
-              otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-            }
-          });
-          if (isHidden) {
-            menu.removeAttribute('hidden');
-            btn.classList.add('active');
-            btn.setAttribute('aria-expanded', 'true');
-          } else {
-            menu.setAttribute('hidden', '');
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        });
-      });
-      document.addEventListener('click', function(e){
-        if (!e.target.closest('.dropdown-wrapper')) {
-          dropdownBtns.forEach(btn => {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-            btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-          });
-        }
-      });
-    })();
+    // Dropdown handled by shared assets/dashboard.js
   </script>
+  <script src="assets/dashboard.js"></script>
 </body>
 </html>
