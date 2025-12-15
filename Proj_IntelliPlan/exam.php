@@ -36,18 +36,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     <nav class="nav">
       <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
-      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
-        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
-          <span class="nav-icon">🧩</span>
-          <span class="nav-label">Activities</span>
-          <span class="dropdown-arrow">▼</span>
-        </summary>
-        <div class="subnav">
-          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
-          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
-          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
-        </div>
-      </details>
+      <a class="nav-item active" href="exam.php"><span class="nav-icon">📝</span><span class="nav-label">Exams</span></a>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
         <span class="nav-icon">🚪</span>

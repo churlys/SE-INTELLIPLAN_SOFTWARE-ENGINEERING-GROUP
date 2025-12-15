@@ -344,6 +344,9 @@ select.select:focus {
 
 .nav-activities > summary {
   list-style: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .nav-activities > summary::-webkit-details-marker {
