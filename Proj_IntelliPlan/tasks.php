@@ -63,10 +63,61 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     </header>
 
     <section class="content">
-      <h2>Tasks</h2>
-      <div class="panel">
-        <div id="tasksList" class="panel-body muted">Loading tasks…</div>
-      </div>
+        <div class="tasks-shell">
+          <div class="tasks-head-row">
+            <div class="tasks-title">
+              <span class="tasks-title-icon" aria-hidden="true">📋</span>
+              <h2>Tasks</h2>
+            </div>
+            <button type="button" class="tasks-add-btn" id="openAddTask">Add Task</button>
+          </div>
+
+          <div class="tasks-tabs" role="tablist" aria-label="Task filter">
+            <button type="button" class="tasks-tab active" data-view="current" role="tab" aria-selected="true">Current</button>
+            <button type="button" class="tasks-tab" data-view="past" role="tab" aria-selected="false">Past</button>
+            <button type="button" class="tasks-tab" data-view="overdue" role="tab" aria-selected="false">Overdue</button>
+          </div>
+
+          <div class="tasks-filters">
+            <label class="tasks-select" aria-label="Select Subject">
+              <select id="subjectFilter">
+                <option value="">Select Subject</option>
+              </select>
+              <span class="tasks-select-arrow" aria-hidden="true">▾</span>
+            </label>
+          </div>
+
+          <div id="addTaskPanel" class="tasks-add" hidden>
+            <form id="addTaskForm" class="tasks-add-form" autocomplete="off">
+              <div class="tasks-add-grid">
+                <label class="tasks-field">
+                  <span class="tasks-label">Title</span>
+                  <input id="taskTitle" type="text" placeholder="Enter task title" required>
+                </label>
+                <label class="tasks-field">
+                  <span class="tasks-label">Subject</span>
+                  <input id="taskSubject" type="text" placeholder="e.g. Math">
+                </label>
+                <label class="tasks-field">
+                  <span class="tasks-label">Due Date</span>
+                  <input id="taskDue" type="date">
+                </label>
+                <label class="tasks-field tasks-field-full">
+                  <span class="tasks-label">Details</span>
+                  <textarea id="taskDetails" rows="3" placeholder="Optional details"></textarea>
+                </label>
+              </div>
+              <div class="tasks-add-actions">
+                <button type="button" class="tasks-btn" id="cancelAddTask">Cancel</button>
+                <button type="submit" class="tasks-btn tasks-btn-primary">Save</button>
+              </div>
+              <div id="addTaskError" class="tasks-error" hidden></div>
+            </form>
+          </div>
+
+          <div class="tasks-section-label" id="tasksSectionLabel">This month (0)</div>
+          <div id="tasksList" class="tasks-list"></div>
+        </div>
     </section>
   </main>
 
@@ -81,33 +132,237 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     document.getElementById('liveTime').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
     document.getElementById('liveDate').textContent = new Date().toLocaleDateString(undefined, {weekday: 'long', month: 'long', day: 'numeric'});
 
-    // Fetch tasks from API
-    async function loadTasks(){
-      try{
+    const tasksListEl = document.getElementById('tasksList');
+    const tasksSectionLabelEl = document.getElementById('tasksSectionLabel');
+    const subjectFilterEl = document.getElementById('subjectFilter');
+    const openAddTaskBtn = document.getElementById('openAddTask');
+    const addTaskPanel = document.getElementById('addTaskPanel');
+    const cancelAddTaskBtn = document.getElementById('cancelAddTask');
+    const addTaskForm = document.getElementById('addTaskForm');
+    const addTaskError = document.getElementById('addTaskError');
+
+    let allTasks = [];
+    let currentView = 'current';
+
+    function escapeHtml(s){
+      return (s+'')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function isoToday(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isThisMonth(isoDate){
+      if (!isoDate) return false;
+      const d = new Date(isoDate + 'T00:00:00');
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+
+    function filteredTasks(){
+      const subject = (subjectFilterEl?.value || '').trim();
+      const today = isoToday();
+
+      return allTasks.filter(t => {
+        if (subject && (t.subject || '') !== subject) return false;
+
+        const status = (t.status || 'open').toLowerCase();
+        const due = t.due_date || '';
+
+        if (currentView === 'past') {
+          return status === 'done';
+        }
+        if (currentView === 'overdue') {
+          return status !== 'done' && !!due && due < today;
+        }
+        // current
+        return status !== 'done' && (!due || due >= today);
+      });
+    }
+
+    function upsertSubjectOptions(tasks){
+      if (!subjectFilterEl) return;
+      const subjects = Array.from(new Set(tasks.map(t => (t.subject || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+      const current = subjectFilterEl.value;
+      subjectFilterEl.innerHTML = '<option value="">Select Subject</option>' + subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      if (subjects.includes(current)) subjectFilterEl.value = current;
+    }
+
+    function render(){
+      const tasks = filteredTasks();
+      const thisMonthCount = tasks.filter(t => isThisMonth(t.due_date)).length;
+      tasksSectionLabelEl.textContent = `This month (${thisMonthCount})`;
+
+      if (!tasksListEl) return;
+      tasksListEl.innerHTML = '';
+
+      if (tasks.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'tasks-empty muted';
+        empty.textContent = 'No tasks to display.';
+        tasksListEl.appendChild(empty);
+        return;
+      }
+
+      tasks.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'task-card';
+
+        const left = document.createElement('div');
+        left.className = 'task-left';
+
+        const isDone = (t.status || 'open').toLowerCase() === 'done';
+        const check = document.createElement('button');
+        check.type = 'button';
+        check.className = 'task-check' + (isDone ? ' done' : '');
+        check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
+        check.addEventListener('click', async () => {
+          try {
+            const nextStatus = isDone ? 'open' : 'done';
+            await updateTask({
+              id: t.id,
+              title: t.title,
+              details: t.details ?? null,
+              subject: t.subject ?? null,
+              due_date: t.due_date ?? null,
+              status: nextStatus,
+            });
+            await refreshTasks();
+          } catch (e) {
+            // no-op; fetch error shown in list on next render
+          }
+        });
+
+        const main = document.createElement('div');
+        main.className = 'task-main';
+        const title = document.createElement('div');
+        title.className = 'task-title';
+        title.textContent = t.title || 'Untitled';
+        const meta = document.createElement('div');
+        meta.className = 'task-meta';
+        const parts = [];
+        if (t.subject) parts.push(t.subject);
+        if (t.due_date) parts.push(t.due_date);
+        meta.textContent = parts.join(' • ');
+        main.appendChild(title);
+        if (parts.length) main.appendChild(meta);
+
+        left.appendChild(check);
+        left.appendChild(main);
+
+        card.appendChild(left);
+        tasksListEl.appendChild(card);
+      });
+    }
+
+    async function refreshTasks(){
+      try {
         const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Network error ' + res.status);
         const tasks = await res.json();
-        const el = document.getElementById('tasksList');
-        if (!Array.isArray(tasks) || tasks.length === 0){
-          el.classList.add('muted');
-          el.textContent = 'No tasks to display.';
-          return;
-        }
-        el.classList.remove('muted');
-        el.innerHTML = '';
-        tasks.forEach(t => {
-          const item = document.createElement('div');
-          item.style.padding = '10px 0';
-          item.style.borderBottom = '1px solid var(--border)';
-          item.innerHTML = `<div style="font-weight:700">${escapeHtml(t.title)}</div><div style="color:var(--muted);font-size:13px">${t.due_date || ''}</div>`;
-          el.appendChild(item);
-        });
-      } catch (e){
-        document.getElementById('tasksList').textContent = 'Failed to load tasks: ' + e.message;
+        allTasks = Array.isArray(tasks) ? tasks : [];
+        upsertSubjectOptions(allTasks);
+        render();
+      } catch (e) {
+        tasksListEl.innerHTML = '';
+        const err = document.createElement('div');
+        err.className = 'tasks-empty';
+        err.textContent = 'Failed to load tasks: ' + e.message;
+        tasksListEl.appendChild(err);
       }
     }
-    function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    loadTasks();
+
+    async function createTask(payload){
+      const res = await fetch('lib/api/tasks.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Request failed ' + res.status));
+      return data;
+    }
+
+    async function updateTask(payload){
+      const res = await fetch('lib/api/tasks.php', {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Request failed ' + res.status));
+      return data;
+    }
+
+    // Tabs
+    document.querySelectorAll('.tasks-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentView = btn.getAttribute('data-view') || 'current';
+        document.querySelectorAll('.tasks-tab').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        render();
+      });
+    });
+
+    subjectFilterEl?.addEventListener('change', render);
+
+    // Add task panel
+    openAddTaskBtn?.addEventListener('click', () => {
+      addTaskPanel.hidden = !addTaskPanel.hidden;
+      addTaskError.hidden = true;
+      if (!addTaskPanel.hidden) document.getElementById('taskTitle')?.focus();
+    });
+    cancelAddTaskBtn?.addEventListener('click', () => {
+      addTaskPanel.hidden = true;
+      addTaskError.hidden = true;
+    });
+
+    addTaskForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      addTaskError.hidden = true;
+
+      const title = document.getElementById('taskTitle')?.value?.trim() || '';
+      const subject = document.getElementById('taskSubject')?.value?.trim() || '';
+      const due = document.getElementById('taskDue')?.value || null;
+      const details = document.getElementById('taskDetails')?.value?.trim() || '';
+
+      if (!title) {
+        addTaskError.textContent = 'Title is required.';
+        addTaskError.hidden = false;
+        return;
+      }
+
+      try {
+        await createTask({
+          title,
+          subject: subject || null,
+          due_date: due || null,
+          details: details || null,
+        });
+        addTaskForm.reset();
+        addTaskPanel.hidden = true;
+        await refreshTasks();
+      } catch (err) {
+        addTaskError.textContent = err.message || 'Failed to save task.';
+        addTaskError.hidden = false;
+      }
+    });
+
+    refreshTasks();
   </script>
 </body>
 </html>

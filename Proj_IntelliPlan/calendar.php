@@ -84,19 +84,41 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       <div class="top-actions">
         <button class="icon-btn" aria-label="Settings">⚙️</button>
         <button class="icon-btn" aria-label="Profile">👤</button>
-    
         <div class="user-chip"><?php echo htmlspecialchars($user['email']); ?></div>
       </div>
-  
+    </header>
+
+    <section class="content">
+      <div class="calendar-shell" aria-label="Calendar">
+        <div class="cal-header-row">
+          <div>
+            <div class="cal-title">Calendar</div>
+            <div class="cal-range" id="calRange">&nbsp;</div>
+          </div>
+
+          <div class="cal-controls" aria-label="Calendar controls">
+            <button type="button" class="cal-btn" id="prevBtn" aria-label="Previous">←</button>
+            <button type="button" class="cal-btn" id="todayBtn">Today</button>
+            <button type="button" class="cal-btn" id="nextBtn" aria-label="Next">→</button>
+
+            <div class="cal-mode" role="tablist" aria-label="Calendar mode">
+              <button type="button" class="mode-btn active" id="modeWeek" role="tab" aria-selected="true">Week</button>
+              <button type="button" class="mode-btn" id="modeMonth" role="tab" aria-selected="false">Month</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="weekView" class="week-view"></div>
         <div id="monthView" class="month-view" hidden></div>
       </div>
-    </div>
-    </main>
-    <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
-    </form>
-    <script src="assets/dashboard.js"></script>
-    <script src="assets/calendar.js"></script>
-    
-  </body>
-  </html>
+    </section>
+  </main>
+
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+  </form>
+  <script src="assets/dashboard.js"></script>
+  <script src="assets/calendar.js"></script>
+  
+ </body>
+ </html>
