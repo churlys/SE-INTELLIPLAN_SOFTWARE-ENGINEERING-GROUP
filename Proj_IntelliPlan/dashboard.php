@@ -23,6 +23,8 @@ function hourLabel(int $hour): string {
 
 // Detect current page
 $currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,18 +53,18 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <span class="nav-icon">🗓️</span>
         <span class="nav-label">Calendar</span>
       </a>
-      <div class="nav-item dropdown-wrapper">
-        <button class="nav-item dropdown-btn" aria-label="Activities menu" aria-expanded="false">
+      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
+        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
           <span class="nav-icon">🧩</span>
           <span class="nav-label">Activities</span>
           <span class="dropdown-arrow">▼</span>
-        </button>
-        <div class="dropdown-menu" hidden>
-          <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exam.php" class="dropdown-item">📝 Exams</a>
-          <a href="classes.php" class="dropdown-item">🎓 Classes</a>
+        </summary>
+        <div class="subnav">
+          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
+          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
+          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
         </div>
-      </div>
+      </details>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
         <span class="nav-icon">🚪</span>
@@ -91,7 +93,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <div class="focus-card">
             <div class="focus-card-inner">
               <div class="focus-info">
-                <p class="muted">0 task due today.</p>
+                <p class="muted"><span id="dueTodayCount">0</span> task due today.</p>
                 <h2>GOOD AFTERNOON.</h2>
               </div>
               <div class="focus-timer">
@@ -221,11 +223,17 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <div class="panel-head">
             <span>Tasks</span>
             <div class="panel-filters">
-              <div class="select">Select Subject</div>
-              <div class="select">Current</div>
+              <select class="select" id="dashTasksSubject" aria-label="Select Subject">
+                <option value="">Select Subject</option>
+              </select>
+              <select class="select" id="dashTasksView" aria-label="Select View">
+                <option value="current" selected>Current</option>
+                <option value="past">Past</option>
+                <option value="overdue">Overdue</option>
+              </select>
             </div>
           </div>
-          <div class="panel-body muted">No tasks to display.</div>
+          <div class="panel-body" id="dashboardTasksList">Loading tasks…</div>
         </div>
 
         <div class="panel">
@@ -246,50 +254,5 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
   </form>
   <script src="assets/dashboard.js"></script>
-  <script>
-    (function(){
-      const dropdownBtns = document.querySelectorAll('.dropdown-btn');
-      
-      dropdownBtns.forEach(btn => {
-        btn.addEventListener('click', function(e){
-          e.preventDefault();
-          const wrapper = this.closest('.dropdown-wrapper');
-          const menu = wrapper.querySelector('.dropdown-menu');
-          const isHidden = menu.hasAttribute('hidden');
-          
-          // Close all other dropdowns
-          document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
-            if (otherBtn !== btn) {
-              otherBtn.classList.remove('active');
-              otherBtn.setAttribute('aria-expanded', 'false');
-              otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-            }
-          });
-          
-          // Toggle current dropdown
-          if (isHidden) {
-            menu.removeAttribute('hidden');
-            btn.classList.add('active');
-            btn.setAttribute('aria-expanded', 'true');
-          } else {
-            menu.setAttribute('hidden', '');
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        });
-      });
-      
-      // Close dropdown when clicking outside
-      document.addEventListener('click', function(e){
-        if (!e.target.closest('.dropdown-wrapper')) {
-          dropdownBtns.forEach(btn => {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-            btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-          });
-        }
-      });
-    })();
-  </script>
 </body>
 </html>

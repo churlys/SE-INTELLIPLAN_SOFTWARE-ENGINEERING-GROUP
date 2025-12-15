@@ -14,6 +14,10 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
 } else {
   $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
 }
+
+$currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!doctype html>
 <html lang="en">
@@ -55,12 +59,54 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </section>
   </main>
 
-  <form id="logoutForm" method="POST" action="logout.php" style="display:none;"></form>
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <?php if (function_exists('csrf_token')): ?>
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+    <?php endif; ?>
+  </form>
 
   <script>
     // Load current date/time
     document.getElementById('liveTime').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
     document.getElementById('liveDate').textContent = new Date().toLocaleDateString(undefined, {weekday: 'long', month: 'long', day: 'numeric'});
+
+    // Dropdown toggle functionality
+    (function(){
+      const dropdownBtns = document.querySelectorAll('.dropdown-btn');
+      dropdownBtns.forEach(btn => {
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
+          const wrapper = this.closest('.dropdown-wrapper');
+          const menu = wrapper.querySelector('.dropdown-menu');
+          const isHidden = menu.hasAttribute('hidden');
+          document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
+            if (otherBtn !== btn) {
+              otherBtn.classList.remove('active');
+              otherBtn.setAttribute('aria-expanded', 'false');
+              otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
+            }
+          });
+          if (isHidden) {
+            menu.removeAttribute('hidden');
+            btn.classList.add('active');
+            btn.setAttribute('aria-expanded', 'true');
+          } else {
+            menu.setAttribute('hidden', '');
+            btn.classList.remove('active');
+            btn.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+      document.addEventListener('click', function(e){
+        if (!e.target.closest('.dropdown-wrapper')) {
+          dropdownBtns.forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
+          });
+        }
+      });
+    })();
   </script>
 </body>
 </html>

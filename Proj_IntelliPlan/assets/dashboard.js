@@ -107,6 +107,166 @@ if (resetBtn) {
 document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
   renderTimer();
+
+  // ===== Dashboard task widgets (stats + list) =====
+  (async function initDashboardTasks(){
+    const statPendingEl = document.getElementById('statPending');
+    const statOverdueEl = document.getElementById('statOverdue');
+    const statCompletedEl = document.getElementById('statCompleted');
+    const dueTodayCountEl = document.getElementById('dueTodayCount');
+    const dashboardTasksListEl = document.getElementById('dashboardTasksList');
+    const dashTasksSubjectEl = document.getElementById('dashTasksSubject');
+    const dashTasksViewEl = document.getElementById('dashTasksView');
+
+    // Only run on pages that actually have dashboard task widgets.
+    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl) return;
+
+    function isoToday(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isDone(t){
+      return (t?.status || 'open').toLowerCase() === 'done';
+    }
+
+    function isOverdue(t, today){
+      const due = t?.due_date || '';
+      if (!due) return false;
+      return !isDone(t) && due < today;
+    }
+
+    function isPending(t, today){
+      const due = t?.due_date || '';
+      if (isDone(t)) return false;
+      return !due || due >= today;
+    }
+
+    function isDueToday(t, today){
+      const due = t?.due_date || '';
+      return !isDone(t) && !!due && due === today;
+    }
+
+    async function fetchTasks(){
+      const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Network error ' + res.status);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    function buildSubjectOptions(tasks){
+      if (!dashTasksSubjectEl) return;
+      const selected = dashTasksSubjectEl.value;
+      const subjects = Array.from(new Set(tasks.map(t => (t?.subject || '').trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b));
+
+      dashTasksSubjectEl.innerHTML = '<option value="">Select Subject</option>' +
+        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+      if (selected && subjects.includes(selected)) {
+        dashTasksSubjectEl.value = selected;
+      }
+    }
+
+    function filterForPanel(tasks){
+      const today = isoToday();
+      const subject = (dashTasksSubjectEl?.value || '').trim();
+      const view = (dashTasksViewEl?.value || 'current').toLowerCase();
+
+      return tasks.filter(t => {
+        if (subject && (t?.subject || '') !== subject) return false;
+
+        if (view === 'past') return isDone(t);
+        if (view === 'overdue') return isOverdue(t, today);
+        // current
+        return isPending(t, today);
+      });
+    }
+
+    function renderTaskList(tasks){
+      if (!dashboardTasksListEl) return;
+      const current = filterForPanel(tasks)
+        .sort((a, b) => {
+          const ad = a?.due_date || '';
+          const bd = b?.due_date || '';
+          if (!ad && bd) return 1;
+          if (ad && !bd) return -1;
+          if (ad && bd && ad !== bd) return ad.localeCompare(bd);
+          return (b?.id || 0) - (a?.id || 0);
+        })
+        .slice(0, 5);
+
+      if (current.length === 0) {
+        dashboardTasksListEl.classList.add('muted');
+        dashboardTasksListEl.textContent = 'No tasks to display.';
+        return;
+      }
+
+      dashboardTasksListEl.classList.remove('muted');
+      dashboardTasksListEl.innerHTML = '';
+      current.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'dash-task-item';
+        const meta = [];
+        if (t.subject) meta.push(t.subject);
+        if (t.due_date) meta.push(t.due_date);
+        row.innerHTML = `
+          <div class="dash-task-title">${escapeHtml(t.title || 'Untitled')}</div>
+          ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
+        `;
+        dashboardTasksListEl.appendChild(row);
+      });
+    }
+
+    function escapeHtml(s){
+      return (s + '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    try {
+      const tasks = await fetchTasks();
+      const today = isoToday();
+
+      const pendingCount = tasks.filter(t => isPending(t, today)).length;
+      const overdueCount = tasks.filter(t => isOverdue(t, today)).length;
+      const completedCount = tasks.filter(t => isDone(t)).length;
+      const dueTodayCount = tasks.filter(t => isDueToday(t, today)).length;
+
+      if (statPendingEl) statPendingEl.textContent = String(pendingCount);
+      if (statOverdueEl) statOverdueEl.textContent = String(overdueCount);
+      if (statCompletedEl) statCompletedEl.textContent = String(completedCount);
+
+      if (dueTodayCountEl) {
+        dueTodayCountEl.textContent = String(dueTodayCount);
+        // Fix plural grammar by tweaking the trailing text node when present.
+        const p = dueTodayCountEl.parentElement;
+        if (p && p.childNodes && p.childNodes.length) {
+          const last = p.childNodes[p.childNodes.length - 1];
+          if (last && last.nodeType === Node.TEXT_NODE) {
+            last.textContent = ` ${dueTodayCount === 1 ? 'task' : 'tasks'} due today.`;
+          }
+        }
+      }
+
+      buildSubjectOptions(tasks);
+      renderTaskList(tasks);
+
+      dashTasksSubjectEl?.addEventListener('change', () => renderTaskList(tasks));
+      dashTasksViewEl?.addEventListener('change', () => renderTaskList(tasks));
+    } catch (e) {
+      if (dashboardTasksListEl) {
+        dashboardTasksListEl.classList.add('muted');
+        dashboardTasksListEl.textContent = 'Failed to load tasks.';
+      }
+    }
+  })();
 });
 
 // ===== Dropdown click-to-toggle behavior (no hover) =====

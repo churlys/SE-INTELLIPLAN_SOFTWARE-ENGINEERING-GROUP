@@ -539,8 +539,8 @@ body{
 
 /* Left column form styles */
 .auth-form-col{ padding-right:6px; }
-.back-link{ display:inline-block; color:#071232; text-decoration:none; font-weight:700; margin-bottom:6px; }
-.auth-heading{ margin:6px 0 8px; font-size:28px; font-weight:800; color:#071232; }
+.back-link{ display:inline-block; color:#0f172a; text-decoration:none; font-weight:700; margin-bottom:6px; }
+.auth-heading{ margin:6px 0 8px; font-size:28px; font-weight:800; color:#0f172a; }
 .auth-sub{ margin:0 0 18px; color:var(--muted); font-size:14px; }
 
 /* error messages */

@@ -23,6 +23,8 @@ function hourLabel(int $hour): string {
 
 // Detect current page
 $currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!doctype html>
 <html lang="en">
@@ -53,18 +55,18 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <span class="nav-icon">🗓️</span>
         <span class="nav-label">Calendar</span>
       </a>
-      <div class="nav-item dropdown-wrapper">
-        <button class="nav-item dropdown-btn" aria-label="Activities menu" aria-expanded="false">
+      <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
+        <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
           <span class="nav-icon">🧩</span>
           <span class="nav-label">Activities</span>
           <span class="dropdown-arrow">▼</span>
-        </button>
-        <div class="dropdown-menu" hidden>
-          <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exam.php" class="dropdown-item">📝 Exams</a>
-          <a href="classes.php" class="dropdown-item">🎓 Classes</a>
+        </summary>
+        <div class="subnav">
+          <a href="tasks.php" class="subnav-item <?php echo ($currentPage === 'tasks.php') ? 'active' : ''; ?>">📋 Tasks</a>
+          <a href="classes.php" class="subnav-item <?php echo ($currentPage === 'classes.php') ? 'active' : ''; ?>">🎓 Classes</a>
+          <a href="exam.php" class="subnav-item <?php echo ($currentPage === 'exam.php') ? 'active' : ''; ?>">📝 Exams</a>
         </div>
-      </div>
+      </details>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();">
         <span class="nav-icon">🚪</span>
@@ -82,24 +84,26 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <div class="top-actions">
         <button class="icon-btn" aria-label="Settings">⚙️</button>
         <button class="icon-btn" aria-label="Profile">👤</button>
-    
         <div class="user-chip"><?php echo htmlspecialchars($user['email']); ?></div>
       </div>
     </header>
-    <div class="container-inner">
-      <div class="calendar-shell">
+
+    <section class="content">
+      <div class="calendar-shell" aria-label="Calendar">
         <div class="cal-header-row">
           <div>
             <div class="cal-title">Calendar</div>
-            <div class="cal-range" id="calRange">This week</div>
+            <div class="cal-range" id="calRange">&nbsp;</div>
           </div>
-          <div class="cal-controls">
-            <button class="cal-btn" id="prevBtn" aria-label="Previous">‹</button>
-            <button class="cal-btn" id="todayBtn">Today</button>
-            <button class="cal-btn" id="nextBtn" aria-label="Next">›</button>
-            <div class="cal-mode">
-              <button class="mode-btn active" data-mode="week" id="modeWeek">Week</button>
-              <button class="mode-btn" data-mode="month" id="modeMonth">Month</button>
+
+          <div class="cal-controls" aria-label="Calendar controls">
+            <button type="button" class="cal-btn" id="prevBtn" aria-label="Previous">←</button>
+            <button type="button" class="cal-btn" id="todayBtn">Today</button>
+            <button type="button" class="cal-btn" id="nextBtn" aria-label="Next">→</button>
+
+            <div class="cal-mode" role="tablist" aria-label="Calendar mode">
+              <button type="button" class="mode-btn active" id="modeWeek" role="tab" aria-selected="true">Week</button>
+              <button type="button" class="mode-btn" id="modeMonth" role="tab" aria-selected="false">Month</button>
             </div>
           </div>
         </div>
@@ -107,58 +111,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div id="weekView" class="week-view"></div>
         <div id="monthView" class="month-view" hidden></div>
       </div>
-    </div>
-    </main>
-    <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
-    </form>
-    <script src="assets/dashboard.js"></script>
-    <script src="assets/calendar.js"></script>
-    <script>
-      (function(){
-        const dropdownBtns = document.querySelectorAll('.dropdown-btn');
-        
-        dropdownBtns.forEach(btn => {
-          btn.addEventListener('click', function(e){
-            e.preventDefault();
-            const wrapper = this.closest('.dropdown-wrapper');
-            const menu = wrapper.querySelector('.dropdown-menu');
-            const isHidden = menu.hasAttribute('hidden');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
-              if (otherBtn !== btn) {
-                otherBtn.classList.remove('active');
-                otherBtn.setAttribute('aria-expanded', 'false');
-                otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-              }
-            });
-            
-            // Toggle current dropdown
-            if (isHidden) {
-              menu.removeAttribute('hidden');
-              btn.classList.add('active');
-              btn.setAttribute('aria-expanded', 'true');
-            } else {
-              menu.setAttribute('hidden', '');
-              btn.classList.remove('active');
-              btn.setAttribute('aria-expanded', 'false');
-            }
-          });
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e){
-          if (!e.target.closest('.dropdown-wrapper')) {
-            dropdownBtns.forEach(btn => {
-              btn.classList.remove('active');
-              btn.setAttribute('aria-expanded', 'false');
-              btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-            });
-          }
-        });
-      })();
-    </script>
-    
-  </body>
-  </html>
+    </section>
+  </main>
+
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+  </form>
+  <script src="assets/dashboard.js"></script>
+  <script src="assets/calendar.js"></script>
+  
+ </body>
+ </html>

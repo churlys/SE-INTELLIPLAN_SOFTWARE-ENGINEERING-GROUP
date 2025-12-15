@@ -86,12 +86,12 @@ body{
 .cal-title {
   font-size: 18px;
   font-weight: 700;
-  color: #121826;
+  color: var(--text);
 }
 
 .cal-range {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted);
   margin-top: 4px;
 }
 
@@ -104,7 +104,7 @@ body{
 .cal-btn {
   border: 1px solid #e5e7eb;
   background: #f9fafb;
-  color: #111827;
+  color: var(--text);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;
@@ -130,14 +130,14 @@ body{
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .mode-btn.active {
   background: #ffffff;
-  color: #111827;
+  color: var(--text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
@@ -165,13 +165,13 @@ body{
 
 .week-day .label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .week-day .date {
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .week-day.today {
@@ -198,7 +198,7 @@ body{
 
 .day-column h4 {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted);
   margin: 0;
 }
 
@@ -242,7 +242,7 @@ body{
 
 .month-cell .date {
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .month-cell.today {
