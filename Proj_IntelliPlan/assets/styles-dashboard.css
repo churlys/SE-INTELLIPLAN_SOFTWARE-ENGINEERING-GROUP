@@ -165,7 +165,14 @@ body {
 .muted { color: var(--muted); }
 
 /* Timer */
-.focus-timer { display: flex; align-items: center; gap: 18px; }
+.focus-timer { display: flex; align-items: center; }
+
+.timer-panel {
+  display: grid;
+  grid-template-columns: auto 56px;
+  column-gap: 16px;
+  align-items: center;
+}
 .timer-ring {
   width: 140px; height: 140px;
   border-radius: 50%;
@@ -179,15 +186,31 @@ body {
   width: 110px; height: 110px;
   border-radius: 50%;
   background: #fff;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
   box-shadow: 0 1px 0 0 #e8eef7 inset;
+  gap: 6px;
+}
+
+.timer-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
 }
 .timer-label {
   font-weight: 700;
   font-size: 22px;
   color: var(--text);
 }
-.timer-controls { display: flex; gap: 10px; }
+.timer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
 .circle-btn {
   width: 42px; height: 42px;
   border-radius: 50%;
@@ -196,8 +219,26 @@ body {
   box-shadow: 0 0 0 1px var(--border) inset;
   cursor: pointer;
   font-size: 18px;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  color: inherit;
 }
 .circle-btn:hover { background: var(--panel-2); }
+
+.circle-btn-primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(43,116,247,0.25);
+}
+
+.circle-btn-primary:hover {
+  background: var(--primary-2);
+}
+
+.circle-btn-soft {
+  background: #fff;
+}
 
 /* Stats row */
 .stats-row {

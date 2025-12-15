@@ -1,4 +1,4 @@
-// Live clock and Pomodoro timer driven entirely by JS (no fixed text in HTML).
+// Clock + Pomodoro settings page logic (shared timer state with dashboard).
 
 // ===== Live Clock =====
 function formatTime(date) {
@@ -8,6 +8,7 @@ function formatTime(date) {
   hours = hours % 12 || 12;
   return `${hours}:${minutes} ${ampm}`;
 }
+
 function formatDate(date) {
   const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const months = [
@@ -18,6 +19,7 @@ function formatDate(date) {
   const mname = months[date.getMonth()];
   return `${dname}, ${mname} ${date.getDate()}`;
 }
+
 function startLiveClock() {
   const timeEl = document.getElementById("liveTime");
   const dateEl = document.getElementById("liveDate");
@@ -30,7 +32,7 @@ function startLiveClock() {
   setInterval(tick, 1000);
 }
 
-// ===== Pomodoro Timer =====
+// ===== Shared Pomodoro State =====
 const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
 const POMODORO_SETTINGS = {
   focusMinutes: 'intelliplan:pomodoroFocusMinutes',
@@ -62,6 +64,8 @@ function loadPomodoroSettings() {
   const breakMinutes = getIntSetting(POMODORO_SETTINGS.breakMinutes, 5);
   const alertSound = getBoolSetting(POMODORO_SETTINGS.alertSound, true);
   return {
+    focusMinutes,
+    breakMinutes,
     focusSeconds: focusMinutes * 60,
     breakSeconds: breakMinutes * 60,
     alertSound,
@@ -90,13 +94,11 @@ function loadPomodoroState() {
     breakSeconds: settings.breakSeconds,
   };
 
-  // Normalize types
   next.running = !!next.running;
   next.mode = next.mode === 'break' ? 'break' : 'focus';
   next.remainingSeconds = Math.max(0, parseInt(next.remainingSeconds || 0, 10));
   next.endAtMs = next.endAtMs ? Number(next.endAtMs) : null;
 
-  // Ensure remaining is set sensibly when stopped
   if (!next.running && (!Number.isFinite(next.remainingSeconds) || next.remainingSeconds <= 0)) {
     next.remainingSeconds = next.mode === 'focus' ? next.focusSeconds : next.breakSeconds;
   }
@@ -186,7 +188,6 @@ function renderPomodoro() {
   startPauseBtn.textContent = state.running ? '⏸' : '▶';
   startPauseBtn.setAttribute('aria-label', state.running ? 'Pause' : 'Start');
 
-  // Persist any auto-advance changes.
   savePomodoroState({ ...state, remainingSeconds: remaining, endAtMs: state.running ? state.endAtMs : null });
 }
 
@@ -253,6 +254,7 @@ function initPomodoro() {
     if (e.key === POMODORO_STATE_KEY || Object.values(POMODORO_SETTINGS).includes(e.key)) {
       renderPomodoro();
       ensurePomodoroTicker();
+      loadSettingsIntoForm();
     }
   });
 
@@ -269,214 +271,57 @@ function initPomodoro() {
   ensurePomodoroTicker();
 }
 
-// ===== Initialize =====
-document.addEventListener("DOMContentLoaded", () => {
+// ===== Settings Form =====
+function loadSettingsIntoForm() {
+  const focusEl = document.getElementById('focusMinutes');
+  const breakEl = document.getElementById('shortBreakMinutes');
+  const alertEl = document.getElementById('alertSound');
+
+  const settings = loadPomodoroSettings();
+  if (focusEl) focusEl.value = String(settings.focusMinutes);
+  if (breakEl) breakEl.value = String(settings.breakMinutes);
+  if (alertEl) alertEl.checked = !!settings.alertSound;
+}
+
+function saveSettingsFromForm() {
+  const focusEl = document.getElementById('focusMinutes');
+  const breakEl = document.getElementById('shortBreakMinutes');
+  const alertEl = document.getElementById('alertSound');
+
+  const focusMinutes = parseInt(focusEl?.value || '25', 10) || 25;
+  const breakMinutes = parseInt(breakEl?.value || '5', 10) || 5;
+  const alertSound = !!alertEl?.checked;
+
+  localStorage.setItem(POMODORO_SETTINGS.focusMinutes, String(focusMinutes));
+  localStorage.setItem(POMODORO_SETTINGS.breakMinutes, String(breakMinutes));
+  localStorage.setItem(POMODORO_SETTINGS.alertSound, alertSound ? '1' : '0');
+
+  // Update state durations. If timer is not running, snap remaining to the current mode duration.
+  let state = loadPomodoroState();
+  const settings = loadPomodoroSettings();
+  state = { ...state, focusSeconds: settings.focusSeconds, breakSeconds: settings.breakSeconds };
+  if (!state.running) {
+    state.remainingSeconds = state.mode === 'focus' ? state.focusSeconds : state.breakSeconds;
+    state.endAtMs = null;
+  }
+  savePomodoroState(state);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   startLiveClock();
+  loadSettingsIntoForm();
   initPomodoro();
 
-  // ===== Dashboard task widgets (stats + list) =====
-  (async function initDashboardTasks(){
-    const statPendingEl = document.getElementById('statPending');
-    const statOverdueEl = document.getElementById('statOverdue');
-    const statCompletedEl = document.getElementById('statCompleted');
-    const dueTodayCountEl = document.getElementById('dueTodayCount');
-    const dashboardTasksListEl = document.getElementById('dashboardTasksList');
-    const dashTasksSubjectEl = document.getElementById('dashTasksSubject');
-    const dashTasksViewEl = document.getElementById('dashTasksView');
+  const btnSave = document.getElementById('btnSave');
+  const btnCancel = document.getElementById('btnCancel');
 
-    // Only run on pages that actually have dashboard task widgets.
-    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl) return;
+  btnSave?.addEventListener('click', () => {
+    saveSettingsFromForm();
+    renderPomodoro();
+    ensurePomodoroTicker();
+  });
 
-    function isoToday(){
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    function isDone(t){
-      return (t?.status || 'open').toLowerCase() === 'done';
-    }
-
-    function isOverdue(t, today){
-      const due = t?.due_date || '';
-      if (!due) return false;
-      return !isDone(t) && due < today;
-    }
-
-    function isPending(t, today){
-      const due = t?.due_date || '';
-      if (isDone(t)) return false;
-      return !due || due >= today;
-    }
-
-    function isDueToday(t, today){
-      const due = t?.due_date || '';
-      return !isDone(t) && !!due && due === today;
-    }
-
-    async function fetchTasks(){
-      const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
-      if (!res.ok) throw new Error('Network error ' + res.status);
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    }
-
-    function buildSubjectOptions(tasks){
-      if (!dashTasksSubjectEl) return;
-      const selected = dashTasksSubjectEl.value;
-      const subjects = Array.from(new Set(tasks.map(t => (t?.subject || '').trim()).filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b));
-
-      dashTasksSubjectEl.innerHTML = '<option value="">Select Subject</option>' +
-        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-
-      if (selected && subjects.includes(selected)) {
-        dashTasksSubjectEl.value = selected;
-      }
-    }
-
-    function filterForPanel(tasks){
-      const today = isoToday();
-      const subject = (dashTasksSubjectEl?.value || '').trim();
-      const view = (dashTasksViewEl?.value || 'current').toLowerCase();
-
-      return tasks.filter(t => {
-        if (subject && (t?.subject || '') !== subject) return false;
-
-        if (view === 'past') return isDone(t);
-        if (view === 'overdue') return isOverdue(t, today);
-        // current
-        return isPending(t, today);
-      });
-    }
-
-    function renderTaskList(tasks){
-      if (!dashboardTasksListEl) return;
-      const current = filterForPanel(tasks)
-        .sort((a, b) => {
-          const ad = a?.due_date || '';
-          const bd = b?.due_date || '';
-          if (!ad && bd) return 1;
-          if (ad && !bd) return -1;
-          if (ad && bd && ad !== bd) return ad.localeCompare(bd);
-          return (b?.id || 0) - (a?.id || 0);
-        })
-        .slice(0, 5);
-
-      if (current.length === 0) {
-        dashboardTasksListEl.classList.add('muted');
-        dashboardTasksListEl.textContent = 'No tasks to display.';
-        return;
-      }
-
-      dashboardTasksListEl.classList.remove('muted');
-      dashboardTasksListEl.innerHTML = '';
-      current.forEach(t => {
-        const row = document.createElement('div');
-        row.className = 'dash-task-item';
-        const meta = [];
-        if (t.subject) meta.push(t.subject);
-        if (t.due_date) meta.push(t.due_date);
-        row.innerHTML = `
-          <div class="dash-task-title">${escapeHtml(t.title || 'Untitled')}</div>
-          ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
-        `;
-        dashboardTasksListEl.appendChild(row);
-      });
-    }
-
-    function escapeHtml(s){
-      return (s + '')
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#039;');
-    }
-
-    try {
-      const tasks = await fetchTasks();
-      const today = isoToday();
-
-      const pendingCount = tasks.filter(t => isPending(t, today)).length;
-      const overdueCount = tasks.filter(t => isOverdue(t, today)).length;
-      const completedCount = tasks.filter(t => isDone(t)).length;
-      const dueTodayCount = tasks.filter(t => isDueToday(t, today)).length;
-
-      if (statPendingEl) statPendingEl.textContent = String(pendingCount);
-      if (statOverdueEl) statOverdueEl.textContent = String(overdueCount);
-      if (statCompletedEl) statCompletedEl.textContent = String(completedCount);
-
-      if (dueTodayCountEl) {
-        dueTodayCountEl.textContent = String(dueTodayCount);
-        // Fix plural grammar by tweaking the trailing text node when present.
-        const p = dueTodayCountEl.parentElement;
-        if (p && p.childNodes && p.childNodes.length) {
-          const last = p.childNodes[p.childNodes.length - 1];
-          if (last && last.nodeType === Node.TEXT_NODE) {
-            last.textContent = ` ${dueTodayCount === 1 ? 'task' : 'tasks'} due today.`;
-          }
-        }
-      }
-
-      buildSubjectOptions(tasks);
-      renderTaskList(tasks);
-
-      dashTasksSubjectEl?.addEventListener('change', () => renderTaskList(tasks));
-      dashTasksViewEl?.addEventListener('change', () => renderTaskList(tasks));
-    } catch (e) {
-      if (dashboardTasksListEl) {
-        dashboardTasksListEl.classList.add('muted');
-        dashboardTasksListEl.textContent = 'Failed to load tasks.';
-      }
-    }
-  })();
+  btnCancel?.addEventListener('click', () => {
+    loadSettingsIntoForm();
+  });
 });
-
-// ===== Dropdown click-to-toggle behavior (no hover) =====
-(function () {
-  function closeAllDropdowns() {
-    document.querySelectorAll('.dropdown-wrapper.open').forEach(wrapper => {
-      wrapper.classList.remove('open');
-      const btn = wrapper.querySelector('.dropdown-btn');
-      const menu = wrapper.querySelector('.dropdown-menu');
-      if (btn) {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-expanded', 'false');
-      }
-      if (menu) menu.hidden = true;
-    });
-  }
-
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.dropdown-btn');
-    if (btn) {
-      const wrapper = btn.closest('.dropdown-wrapper');
-      if (!wrapper) return;
-      const menu = wrapper.querySelector('.dropdown-menu');
-      const isOpen = wrapper.classList.contains('open');
-      // close others
-      closeAllDropdowns();
-      if (!isOpen) {
-        wrapper.classList.add('open');
-        btn.classList.add('active');
-        btn.setAttribute('aria-expanded', 'true');
-        if (menu) menu.hidden = false;
-      }
-      e.preventDefault();
-      return;
-    }
-
-    // Click outside — close all
-    if (!e.target.closest('.dropdown-wrapper')) {
-      closeAllDropdowns();
-    }
-  });
-
-  // Close on Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAllDropdowns();
-  });
-})();

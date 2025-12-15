@@ -97,14 +97,19 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                 <h2>GOOD AFTERNOON.</h2>
               </div>
               <div class="focus-timer">
-                <div class="timer-ring" id="timerRing" aria-label="Pomodoro progress">
-                  <div class="timer-circle">
-                    <div class="timer-label" id="timerLabel">25:00</div>
+                <div class="timer-panel" aria-label="Focus timer">
+                  <div class="timer-ring" id="timerRing" aria-label="Pomodoro progress">
+                    <div class="timer-circle">
+                      <div class="timer-subtitle" id="timerMode">Focus</div>
+                      <div class="timer-label" id="timerLabel">25:00</div>
+                    </div>
                   </div>
-                </div>
-                <div class="timer-controls">
-                  <button class="circle-btn" id="btnStartPause" aria-label="Start">▶</button>
-                  <button class="circle-btn" id="btnReset" aria-label="Reset">↺</button>
+
+                  <div class="timer-actions" aria-label="Timer controls">
+                    <a class="circle-btn circle-btn-soft" href="clocktimer.php" aria-label="Timer settings">⚙️</a>
+                    <button class="circle-btn circle-btn-primary" id="btnStartPause" aria-label="Start">▶</button>
+                    <button class="circle-btn circle-btn-soft" id="btnReset" aria-label="Reset">↺</button>
+                  </div>
                 </div>
               </div>
             </div>

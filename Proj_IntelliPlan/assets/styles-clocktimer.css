@@ -1,0 +1,152 @@
+.ct-shell {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.ct-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ct-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ct-main {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 18px;
+  align-items: start;
+}
+
+.ct-timer {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--border) inset;
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.ct-settings {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px var(--border) inset;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.ct-field {
+  display: grid;
+  gap: 8px;
+}
+
+.ct-label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ct-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.ct-select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ct-field-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.ct-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+}
+
+.ct-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ct-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #cbd5e1;
+  transition: 0.2s;
+  border-radius: 999px;
+}
+
+.ct-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+.ct-switch input:checked + .ct-slider {
+  background: var(--primary);
+}
+
+.ct-switch input:checked + .ct-slider:before {
+  transform: translateX(20px);
+}
+
+.ct-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ct-btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ct-btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.ct-btn-primary:hover {
+  background: var(--primary-2);
+  border-color: var(--primary-2);
+}
+
+@media (max-width: 900px) {
+  .ct-main {
+    grid-template-columns: 1fr;
+  }
+}
