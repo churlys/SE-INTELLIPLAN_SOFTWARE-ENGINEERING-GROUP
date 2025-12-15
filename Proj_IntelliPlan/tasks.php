@@ -14,6 +14,10 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
 } else {
   $user = ['name' => 'Demo User', 'email' => 'user@example.com'];
 }
+
+$currentPage = basename($_SERVER['PHP_SELF']);
+$activitiesPages = ['tasks.php', 'exam.php', 'classes.php'];
+$isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 ?>
 <!doctype html>
 <html lang="en">
@@ -32,18 +36,7 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     <nav class="nav">
       <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
-      <div class="nav-item dropdown-wrapper">
-        <button class="nav-item dropdown-btn" aria-label="Activities menu" aria-expanded="false">
-          <span class="nav-icon">🧩</span>
-          <span class="nav-label">Activities</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <div class="dropdown-menu" hidden>
-          <a href="tasks.php" class="dropdown-item">📋 Tasks</a>
-          <a href="exam.php" class="dropdown-item">📝 Exams</a>
-          <a href="classes.php" class="dropdown-item">🎓 Classes</a>
-        </div>
-      </div>
+      <a class="nav-item active" href="tasks.php"><span class="nav-icon">📋</span><span class="nav-label">Tasks</span></a>
       <div class="nav-separator"></div>
       <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
     </nav>
@@ -66,7 +59,11 @@ if (file_exists(__DIR__ . '/lib/auth.php')) {
     </section>
   </main>
 
-  <form id="logoutForm" method="POST" action="logout.php" style="display:none;"></form>
+  <form id="logoutForm" method="POST" action="logout.php" style="display:none;">
+    <?php if (function_exists('csrf_token')): ?>
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
+    <?php endif; ?>
+  </form>
 
   <script>
     // Load current date/time
