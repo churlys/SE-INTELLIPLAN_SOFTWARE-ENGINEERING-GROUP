@@ -254,50 +254,5 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token()); ?>">
   </form>
   <script src="assets/dashboard.js"></script>
-  <script>
-    (function(){
-      const dropdownBtns = document.querySelectorAll('.dropdown-btn');
-      
-      dropdownBtns.forEach(btn => {
-        btn.addEventListener('click', function(e){
-          e.preventDefault();
-          const wrapper = this.closest('.dropdown-wrapper');
-          const menu = wrapper.querySelector('.dropdown-menu');
-          const isHidden = menu.hasAttribute('hidden');
-          
-          // Close all other dropdowns
-          document.querySelectorAll('.dropdown-wrapper .dropdown-btn').forEach(otherBtn => {
-            if (otherBtn !== btn) {
-              otherBtn.classList.remove('active');
-              otherBtn.setAttribute('aria-expanded', 'false');
-              otherBtn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-            }
-          });
-          
-          // Toggle current dropdown
-          if (isHidden) {
-            menu.removeAttribute('hidden');
-            btn.classList.add('active');
-            btn.setAttribute('aria-expanded', 'true');
-          } else {
-            menu.setAttribute('hidden', '');
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-          }
-        });
-      });
-      
-      // Close dropdown when clicking outside
-      document.addEventListener('click', function(e){
-        if (!e.target.closest('.dropdown-wrapper')) {
-          dropdownBtns.forEach(btn => {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-expanded', 'false');
-            btn.closest('.dropdown-wrapper').querySelector('.dropdown-menu').setAttribute('hidden', '');
-          });
-        }
-      });
-    })();
-  </script>
 </body>
 </html>
