@@ -21,10 +21,19 @@ function formatDate(date) {
 function startLiveClock() {
   const timeEl = document.getElementById("liveTime");
   const dateEl = document.getElementById("liveDate");
+  const greetingEl = document.getElementById('timeGreeting');
+
+  function greetingForHour(hour) {
+    if (hour >= 18) return 'GOOD EVENING.';
+    if (hour >= 12) return 'GOOD AFTERNOON.';
+    return 'GOOD MORNING.';
+  }
+
   function tick() {
     const now = new Date();
     if (timeEl) timeEl.textContent = formatTime(now);
     if (dateEl) dateEl.textContent = formatDate(now);
+    if (greetingEl) greetingEl.textContent = greetingForHour(now.getHours());
   }
   tick();
   setInterval(tick, 1000);
@@ -384,12 +393,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const statOverdueEl = document.getElementById('statOverdue');
     const statCompletedEl = document.getElementById('statCompleted');
     const dueTodayCountEl = document.getElementById('dueTodayCount');
+    const dashTasksCountEl = document.getElementById('dashTasksCount');
     const dashboardTasksListEl = document.getElementById('dashboardTasksList');
     const dashTasksSubjectEl = document.getElementById('dashTasksSubject');
     const dashTasksViewEl = document.getElementById('dashTasksView');
 
     // Only run on pages that actually have dashboard task widgets.
-    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl) return;
+    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl && !dashTasksCountEl) return;
 
     function isoToday(){
       const d = new Date();
@@ -458,7 +468,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderTaskList(tasks){
       if (!dashboardTasksListEl) return;
-      const current = filterForPanel(tasks)
+      const filtered = filterForPanel(tasks);
+      if (dashTasksCountEl) dashTasksCountEl.textContent = String(filtered.length);
+
+      const current = filtered
         .sort((a, b) => {
           const ad = a?.due_date || '';
           const bd = b?.due_date || '';
@@ -535,6 +548,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dashboardTasksListEl.classList.add('muted');
         dashboardTasksListEl.textContent = 'Failed to load tasks.';
       }
+
+      if (dashTasksCountEl) dashTasksCountEl.textContent = '0';
     }
   })();
 });

@@ -94,7 +94,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div class="focus-card-inner">
               <div class="focus-info">
                 <p class="muted"><span id="dueTodayCount">0</span> task due today.</p>
-                <h2>GOOD AFTERNOON.</h2>
+                <h2 id="timeGreeting">GOOD AFTERNOON.</h2>
               </div>
               <div class="focus-timer">
                 <div class="timer-panel" aria-label="Focus timer">
@@ -234,7 +234,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
         <div class="panel">
           <div class="panel-head">
-            <span>Tasks</span>
+            <span>Tasks (<span id="dashTasksCount">0</span>)</span>
             <div class="panel-filters">
               <select class="select" id="dashTasksSubject" aria-label="Select Subject">
                 <option value="">Select Subject</option>
