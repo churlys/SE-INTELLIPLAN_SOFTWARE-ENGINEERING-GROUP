@@ -21,32 +21,215 @@ function formatDate(date) {
 function startLiveClock() {
   const timeEl = document.getElementById("liveTime");
   const dateEl = document.getElementById("liveDate");
+  const greetingEl = document.getElementById("greetingTitle");
+
+  function greetingForHour(hours) {
+    if (hours < 12) return "GOOD MORNING.";
+    if (hours < 18) return "GOOD AFTERNOON.";
+    return "GOOD EVENING.";
+  }
+
+  function updateGreeting(now) {
+    if (!greetingEl) return;
+    const next = greetingForHour(now.getHours());
+    if (greetingEl.textContent !== next) greetingEl.textContent = next;
+  }
+
   function tick() {
     const now = new Date();
     if (timeEl) timeEl.textContent = formatTime(now);
     if (dateEl) dateEl.textContent = formatDate(now);
+    updateGreeting(now);
   }
   tick();
   setInterval(tick, 1000);
 }
 
 // ===== Pomodoro Timer =====
-const DEFAULT_SECONDS = 25 * 60; // 25 minutes
-let remaining = DEFAULT_SECONDS;
-let running = false;
+const STORAGE_FOCUS_MINUTES = "intelliplan:focusMinutes";
+const STORAGE_SHORT_BREAK_MINUTES = "intelliplan:shortBreakMinutes";
+const STORAGE_ALERT_SOUND = "intelliplan:alertSoundEnabled";
+const STORAGE_KEY_LEGACY_MINUTES = "intelliplan:pomodoroMinutes";
+const STORAGE_POMODORO_STATE = "intelliplan:pomodoroState";
+
+const DEFAULT_FOCUS_MINUTES = 25;
+const DEFAULT_SHORT_BREAK_MINUTES = 5;
+
+function clampInt(value, min, max) {
+  const n = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
+
+function getBool(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null) return fallback;
+    return raw === "1" || raw === "true";
+  } catch {
+    return fallback;
+  }
+}
+
+function getInt(key, fallback, min, max) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null) return fallback;
+    return clampInt(raw, min, max);
+  } catch {
+    return fallback;
+  }
+}
+
+function loadFocusMinutes() {
+  try {
+    const raw = localStorage.getItem(STORAGE_FOCUS_MINUTES);
+    if (raw != null) return clampInt(raw, 1, 180);
+    const legacy = localStorage.getItem(STORAGE_KEY_LEGACY_MINUTES);
+    if (legacy != null) return clampInt(legacy, 1, 180);
+    return DEFAULT_FOCUS_MINUTES;
+  } catch {
+    return DEFAULT_FOCUS_MINUTES;
+  }
+}
+
 let intervalId = null;
+
+function ensureTicker() {
+  const { state } = ensureStateUpToDate(loadState(), Date.now());
+  if (state.running) {
+    if (!intervalId) intervalId = setInterval(tickTimer, 500);
+    if (startPauseBtn) {
+      startPauseBtn.textContent = "⏸";
+      startPauseBtn.setAttribute("aria-label", "Pause");
+    }
+  } else {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (startPauseBtn) {
+      startPauseBtn.textContent = "▶";
+      startPauseBtn.setAttribute("aria-label", "Start");
+    }
+  }
+}
 
 const labelEl = document.getElementById("timerLabel");
 const ringEl = document.getElementById("timerRing");
 const startPauseBtn = document.getElementById("btnStartPause");
 const resetBtn = document.getElementById("btnReset");
+const modeEl = document.getElementById("timerMode");
 
-function renderTimer() {
-  const m = Math.floor(remaining / 60).toString().padStart(2, "0");
-  const s = Math.floor(remaining % 60).toString().padStart(2, "0");
+let audioCtx = null;
+async function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") await audioCtx.resume();
+  } catch {
+    // ignore
+  }
+}
+
+function currentDurationSeconds() {
+  const s = loadState();
+  return s.mode === "focus" ? s.focusSeconds : s.breakSeconds;
+}
+
+function modeLabel() {
+  const s = loadState();
+  return s.mode === "focus" ? "Focus" : "Short Break";
+}
+
+function saveState(state) {
+  try {
+    localStorage.setItem(STORAGE_POMODORO_STATE, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+function loadState() {
+  const focusSeconds = loadFocusMinutes() * 60;
+  const breakSeconds = getInt(STORAGE_SHORT_BREAK_MINUTES, DEFAULT_SHORT_BREAK_MINUTES, 1, 60) * 60;
+
+  try {
+    const raw = localStorage.getItem(STORAGE_POMODORO_STATE);
+    if (!raw) {
+      return {
+        mode: "focus",
+        running: false,
+        remainingSeconds: focusSeconds,
+        endAtMs: null,
+        focusSeconds,
+        breakSeconds,
+      };
+    }
+    const parsed = JSON.parse(raw);
+    const mode = parsed?.mode === "break" ? "break" : "focus";
+    const running = !!parsed?.running;
+    const remainingSeconds = clampInt(parsed?.remainingSeconds ?? focusSeconds, 0, 24 * 60 * 60);
+    const endAtMs = Number.isFinite(parsed?.endAtMs) ? parsed.endAtMs : null;
+
+    // Always sync durations to saved settings so both pages agree.
+    return {
+      mode,
+      running,
+      remainingSeconds,
+      endAtMs,
+      focusSeconds,
+      breakSeconds,
+    };
+  } catch {
+    return {
+      mode: "focus",
+      running: false,
+      remainingSeconds: focusSeconds,
+      endAtMs: null,
+      focusSeconds,
+      breakSeconds,
+    };
+  }
+}
+
+function ensureStateUpToDate(state, nowMs) {
+  let changed = false;
+
+  if (state.running) {
+    if (typeof state.endAtMs !== "number") {
+      state.endAtMs = nowMs + state.remainingSeconds * 1000;
+      changed = true;
+    }
+    state.remainingSeconds = Math.max(0, Math.ceil((state.endAtMs - nowMs) / 1000));
+  }
+
+  // Handle mode switch when time hits 0.
+  // Safety loop in case the tab was backgrounded for a long time.
+  for (let i = 0; i < 3; i++) {
+    if (state.running && state.remainingSeconds <= 0) {
+      state.mode = state.mode === "focus" ? "break" : "focus";
+      const duration = state.mode === "focus" ? state.focusSeconds : state.breakSeconds;
+      state.remainingSeconds = duration;
+      state.endAtMs = nowMs + duration * 1000;
+      playBeep();
+      changed = true;
+      continue;
+    }
+    break;
+  }
+
+  return { state, changed };
+}
+
+function renderTimer(state) {
+  if (modeEl) modeEl.textContent = state.mode === "focus" ? "Focus" : "Short Break";
+
+  const m = Math.floor(state.remainingSeconds / 60).toString().padStart(2, "0");
+  const s = Math.floor(state.remainingSeconds % 60).toString().padStart(2, "0");
   if (labelEl) labelEl.textContent = `${m}:${s}`;
 
-  const progress = 1 - remaining / DEFAULT_SECONDS; // 0..1
+  const durationSeconds = state.mode === "focus" ? state.focusSeconds : state.breakSeconds;
+  const progress = durationSeconds > 0 ? (1 - state.remainingSeconds / durationSeconds) : 1;
   const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
   if (ringEl) {
     ringEl.style.background =
@@ -55,48 +238,107 @@ function renderTimer() {
   }
 }
 
-function tickTimer() {
-  if (!running) return;
-  remaining -= 1;
-  if (remaining <= 0) {
-    remaining = 0;
-    running = false;
-    clearInterval(intervalId);
-    intervalId = null;
-    // Optional: notify user
-    // alert("Pomodoro finished!");
+function playBeep() {
+  if (!getBool(STORAGE_ALERT_SOUND, false)) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume?.().catch?.(() => {});
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.value = 0.06;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    setTimeout(() => {
+      osc.stop();
+    }, 180);
+  } catch {
+    // ignore
   }
-  renderTimer();
+}
+
+function tickTimer() {
+  const now = Date.now();
+  const { state, changed } = ensureStateUpToDate(loadState(), now);
+  if (changed) saveState(state);
+  renderTimer(state);
+  ensureTicker();
 }
 
 function startTimer() {
-  if (running) return;
-  running = true;
-  startPauseBtn.textContent = "⏸";
-  startPauseBtn.setAttribute("aria-label", "Pause");
-  if (!intervalId) intervalId = setInterval(tickTimer, 1000);
+  unlockAudio();
+  const now = Date.now();
+  const { state } = ensureStateUpToDate(loadState(), now);
+  if (state.running) return;
+  state.running = true;
+  state.endAtMs = now + state.remainingSeconds * 1000;
+  saveState(state);
+
+  if (startPauseBtn) {
+    startPauseBtn.textContent = "⏸";
+    startPauseBtn.setAttribute("aria-label", "Pause");
+  }
+  ensureTicker();
 }
 
 function pauseTimer() {
-  running = false;
-  startPauseBtn.textContent = "▶";
-  startPauseBtn.setAttribute("aria-label", "Start");
+  unlockAudio();
+  const now = Date.now();
+  const { state, changed } = ensureStateUpToDate(loadState(), now);
+  state.running = false;
+  state.endAtMs = null;
+  saveState(state);
+
+  if (startPauseBtn) {
+    startPauseBtn.textContent = "▶";
+    startPauseBtn.setAttribute("aria-label", "Start");
+  }
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
   }
+  // Render final paused value
+  if (changed) saveState(state);
+  renderTimer(state);
+  ensureTicker();
 }
 
 function resetTimer() {
-  remaining = DEFAULT_SECONDS;
-  pauseTimer();
-  renderTimer();
+  unlockAudio();
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+
+  const focusSeconds = loadFocusMinutes() * 60;
+  const breakSeconds = getInt(STORAGE_SHORT_BREAK_MINUTES, DEFAULT_SHORT_BREAK_MINUTES, 1, 60) * 60;
+  const state = {
+    mode: "focus",
+    running: false,
+    remainingSeconds: focusSeconds,
+    endAtMs: null,
+    focusSeconds,
+    breakSeconds,
+  };
+  saveState(state);
+
+  if (startPauseBtn) {
+    startPauseBtn.textContent = "▶";
+    startPauseBtn.setAttribute("aria-label", "Start");
+  }
+  renderTimer(state);
+  ensureTicker();
 }
 
 // Wire up buttons
 if (startPauseBtn) {
   startPauseBtn.addEventListener("click", () => {
-    running ? pauseTimer() : startTimer();
+    unlockAudio();
+    const { state } = ensureStateUpToDate(loadState(), Date.now());
+    state.running ? pauseTimer() : startTimer();
   });
 }
 if (resetBtn) {
@@ -106,7 +348,37 @@ if (resetBtn) {
 // ===== Initialize =====
 document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
-  renderTimer();
+  tickTimer();
+  ensureTicker();
+
+  // If user comes back from settings, keep dashboard timer in sync.
+  window.addEventListener("focus", () => {
+    tickTimer();
+    ensureTicker();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    // When returning to the tab, immediately catch up.
+    if (!document.hidden) {
+      tickTimer();
+      ensureTicker();
+    }
+  });
+
+  // Live sync across pages/tabs.
+  window.addEventListener("storage", (e) => {
+    if (!e.key) return;
+    if (
+      e.key === STORAGE_POMODORO_STATE ||
+      e.key === STORAGE_FOCUS_MINUTES ||
+      e.key === STORAGE_SHORT_BREAK_MINUTES ||
+      e.key === STORAGE_ALERT_SOUND ||
+      e.key === STORAGE_KEY_LEGACY_MINUTES
+    ) {
+      tickTimer();
+      ensureTicker();
+    }
+  });
 
   // ===== Dashboard task widgets (stats + list) =====
   (async function initDashboardTasks(){
@@ -291,8 +563,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!wrapper) return;
       const menu = wrapper.querySelector('.dropdown-menu');
       const isOpen = wrapper.classList.contains('open');
+
       // close others
       closeAllDropdowns();
+
       if (!isOpen) {
         wrapper.classList.add('open');
         btn.classList.add('active');

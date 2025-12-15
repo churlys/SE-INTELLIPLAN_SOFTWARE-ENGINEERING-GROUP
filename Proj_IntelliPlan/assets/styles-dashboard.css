@@ -150,22 +150,53 @@ body {
 }
 .focus-card-inner {
   border-radius: var(--radius);
-  padding: 18px;
-  background: linear-gradient(90deg, #bfe0ff, #c9d5ff, #d9cfff);
+  padding: 0;
+  background: transparent;
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: center;
+  align-items: stretch;
   gap: 18px;
 }
+.focus-info {
+  background-color: var(--primary);
+  background-image: url('gradient.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: var(--radius);
+  padding: 22px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.focus-info .muted { color: rgba(255,255,255,0.9); }
 .focus-info h2 {
   margin: 8px 0 0;
-  font-size: 26px;
+  font-size: 44px;
   letter-spacing: 0.5px;
+  line-height: 1.05;
 }
 .muted { color: var(--muted); }
 
 /* Timer */
-.focus-timer { display: flex; align-items: center; gap: 18px; }
+.focus-timer {
+  background: var(--panel-2);
+  border-radius: var(--radius);
+  padding: 18px 18px;
+  display: flex;
+  align-items: center;
+}
+
+.timer-panel {
+  display: grid;
+  grid-template-columns: auto 56px;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  row-gap: 12px;
+  align-items: center;
+}
+
 .timer-ring {
   width: 140px; height: 140px;
   border-radius: 50%;
@@ -173,7 +204,21 @@ body {
     radial-gradient(closest-side, #fff 72%, transparent 73% 100%),
     conic-gradient(var(--primary) 0% 70%, var(--ring) 70% 100%);
   display: grid; place-items: center;
-  box-shadow: 0 4px 16px rgba(43,116,247,0.25);
+  box-shadow: 0 4px 16px rgba(43,116,247,0.20);
+  position: relative;
+}
+.timer-ring::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.12);
+  border: 1px solid var(--border);
 }
 .timer-circle {
   width: 110px; height: 110px;
@@ -181,13 +226,26 @@ body {
   background: #fff;
   display: grid; place-items: center;
   box-shadow: 0 1px 0 0 #e8eef7 inset;
+  gap: 6px;
+}
+.timer-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
 }
 .timer-label {
   font-weight: 700;
   font-size: 22px;
   color: var(--text);
 }
-.timer-controls { display: flex; gap: 10px; }
+.timer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
 .circle-btn {
   width: 42px; height: 42px;
   border-radius: 50%;
@@ -196,8 +254,68 @@ body {
   box-shadow: 0 0 0 1px var(--border) inset;
   cursor: pointer;
   font-size: 18px;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  color: inherit;
 }
-.circle-btn:hover { background: var(--panel-2); }
+.circle-btn:hover { background: var(--panel); }
+
+.circle-btn-soft {
+  background: rgba(255,255,255,0.75);
+}
+
+.circle-btn-primary {
+  width: 52px;
+  height: 52px;
+  font-size: 20px;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 10px 18px rgba(43,116,247,0.25);
+  border: 1px solid rgba(255,255,255,0.28);
+}
+.circle-btn-primary:hover {
+  background: var(--primary);
+  filter: brightness(1.05);
+}
+
+.timer-settings {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.timer-settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.timer-settings-input {
+  width: 72px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 0 10px;
+  font-weight: 700;
+  color: var(--text);
+}
+.timer-settings-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(43,116,247,0.18);
+}
+.timer-settings-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+.timer-settings-btn:hover { background: var(--panel-2); }
 
 /* Stats row */
 .stats-row {
