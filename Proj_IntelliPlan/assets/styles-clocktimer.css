@@ -1,0 +1,149 @@
+.ct-shell {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.ct-title {
+  margin: 8px 0 16px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.ct-panel {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+.ct-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ct-field {
+  display: grid;
+  gap: 8px;
+}
+
+.ct-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ct-select {
+  width: 100%;
+  height: 54px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  padding: 0 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ct-toggle-row {
+  margin-top: 14px;
+  height: 54px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ct-toggle-label {
+  font-weight: 700;
+}
+
+.ct-switch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  display: inline-block;
+}
+
+.ct-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ct-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--border);
+  transition: 160ms ease;
+}
+
+.ct-slider::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(15,23,42,0.12);
+  transition: 160ms ease;
+}
+
+.ct-switch input:checked + .ct-slider {
+  background: var(--primary);
+}
+
+.ct-switch input:checked + .ct-slider::after {
+  transform: translateX(20px);
+}
+
+.ct-actions {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.ct-btn {
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ct-btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+}
+
+.ct-btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.ct-timer-wrap {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.ct-timer-wrap .focus-timer {
+  width: 100%;
+  max-width: 520px;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .ct-grid {
+    grid-template-columns: 1fr;
+  }
+  .ct-timer-wrap .focus-timer {
+    max-width: 100%;
+  }
+}
