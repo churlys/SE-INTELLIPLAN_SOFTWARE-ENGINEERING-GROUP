@@ -21,18 +21,62 @@ function formatDate(date) {
 function startLiveClock() {
   const timeEl = document.getElementById("liveTime");
   const dateEl = document.getElementById("liveDate");
+  const greetingEl = document.getElementById("greetingTitle");
+
+  function greetingForHour(hours) {
+    if (hours < 12) return "GOOD MORNING.";
+    if (hours < 18) return "GOOD AFTERNOON.";
+    return "GOOD EVENING.";
+  }
+
+  function updateGreeting(now) {
+    if (!greetingEl) return;
+    const next = greetingForHour(now.getHours());
+    if (greetingEl.textContent !== next) greetingEl.textContent = next;
+  }
+
   function tick() {
     const now = new Date();
     if (timeEl) timeEl.textContent = formatTime(now);
     if (dateEl) dateEl.textContent = formatDate(now);
+    updateGreeting(now);
   }
   tick();
   setInterval(tick, 1000);
 }
 
 // ===== Pomodoro Timer =====
-const DEFAULT_SECONDS = 25 * 60; // 25 minutes
-let remaining = DEFAULT_SECONDS;
+const DEFAULT_MINUTES = 25;
+const MIN_MINUTES = 1;
+const MAX_MINUTES = 180;
+const STORAGE_KEY_MINUTES = "intelliplan:pomodoroMinutes";
+
+function clampInt(value, min, max) {
+  const n = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
+
+function loadSavedMinutes() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MINUTES);
+    if (raw == null) return DEFAULT_MINUTES;
+    return clampInt(raw, MIN_MINUTES, MAX_MINUTES);
+  } catch {
+    return DEFAULT_MINUTES;
+  }
+}
+
+function saveMinutes(minutes) {
+  try {
+    localStorage.setItem(STORAGE_KEY_MINUTES, String(minutes));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+let durationSeconds = loadSavedMinutes() * 60;
+let remaining = durationSeconds;
 let running = false;
 let intervalId = null;
 
@@ -40,13 +84,15 @@ const labelEl = document.getElementById("timerLabel");
 const ringEl = document.getElementById("timerRing");
 const startPauseBtn = document.getElementById("btnStartPause");
 const resetBtn = document.getElementById("btnReset");
+const minutesInputEl = document.getElementById("timerMinutes");
+const setTimerBtn = document.getElementById("btnSetTimer");
 
 function renderTimer() {
   const m = Math.floor(remaining / 60).toString().padStart(2, "0");
   const s = Math.floor(remaining % 60).toString().padStart(2, "0");
   if (labelEl) labelEl.textContent = `${m}:${s}`;
 
-  const progress = 1 - remaining / DEFAULT_SECONDS; // 0..1
+  const progress = durationSeconds > 0 ? (1 - remaining / durationSeconds) : 1; // 0..1
   const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
   if (ringEl) {
     ringEl.style.background =
@@ -63,8 +109,6 @@ function tickTimer() {
     running = false;
     clearInterval(intervalId);
     intervalId = null;
-    // Optional: notify user
-    // alert("Pomodoro finished!");
   }
   renderTimer();
 }
@@ -88,7 +132,17 @@ function pauseTimer() {
 }
 
 function resetTimer() {
-  remaining = DEFAULT_SECONDS;
+  remaining = durationSeconds;
+  pauseTimer();
+  renderTimer();
+}
+
+function applyMinutes(minutes) {
+  const m = clampInt(minutes, MIN_MINUTES, MAX_MINUTES);
+  durationSeconds = m * 60;
+  remaining = durationSeconds;
+  if (minutesInputEl) minutesInputEl.value = String(m);
+  saveMinutes(m);
   pauseTimer();
   renderTimer();
 }
@@ -102,10 +156,26 @@ if (startPauseBtn) {
 if (resetBtn) {
   resetBtn.addEventListener("click", resetTimer);
 }
+if (setTimerBtn) {
+  setTimerBtn.addEventListener("click", () => {
+    applyMinutes(minutesInputEl?.value ?? DEFAULT_MINUTES);
+  });
+}
+if (minutesInputEl) {
+  minutesInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      applyMinutes(minutesInputEl.value);
+    }
+  });
+}
 
 // ===== Initialize =====
 document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
+  if (minutesInputEl) {
+    minutesInputEl.value = String(durationSeconds / 60);
+  }
   renderTimer();
 
   // ===== Dashboard task widgets (stats + list) =====

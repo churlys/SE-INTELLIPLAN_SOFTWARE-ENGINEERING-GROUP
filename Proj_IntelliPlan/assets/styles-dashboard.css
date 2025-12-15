@@ -199,6 +199,42 @@ body {
 }
 .circle-btn:hover { background: var(--panel-2); }
 
+.timer-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer-settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.timer-settings-input {
+  width: 72px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 0 10px;
+  font-weight: 700;
+  color: var(--text);
+}
+.timer-settings-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(43,116,247,0.18);
+}
+.timer-settings-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+.timer-settings-btn:hover { background: var(--panel-2); }
+
 /* Stats row */
 .stats-row {
   display: grid;

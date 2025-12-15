@@ -94,7 +94,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div class="focus-card-inner">
               <div class="focus-info">
                 <p class="muted"><span id="dueTodayCount">0</span> task due today.</p>
-                <h2>GOOD AFTERNOON.</h2>
+                <h2 id="greetingTitle">GOOD AFTERNOON.</h2>
               </div>
               <div class="focus-timer">
                 <div class="timer-ring" id="timerRing" aria-label="Pomodoro progress">
@@ -105,6 +105,11 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                 <div class="timer-controls">
                   <button class="circle-btn" id="btnStartPause" aria-label="Start">▶</button>
                   <button class="circle-btn" id="btnReset" aria-label="Reset">↺</button>
+                </div>
+                <div class="timer-settings" aria-label="Timer duration">
+                  <label class="timer-settings-label" for="timerMinutes">Minutes</label>
+                  <input class="timer-settings-input" id="timerMinutes" type="number" min="1" max="180" step="1" value="25" inputmode="numeric" />
+                  <button class="timer-settings-btn" id="btnSetTimer" type="button">Set</button>
                 </div>
               </div>
             </div>
