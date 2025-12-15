@@ -21,92 +21,371 @@ function formatDate(date) {
 function startLiveClock() {
   const timeEl = document.getElementById("liveTime");
   const dateEl = document.getElementById("liveDate");
+  const greetingEl = document.getElementById('timeGreeting');
+
+  function greetingForHour(hour) {
+    if (hour >= 18) return 'GOOD EVENING.';
+    if (hour >= 12) return 'GOOD AFTERNOON.';
+    return 'GOOD MORNING.';
+  }
+
   function tick() {
     const now = new Date();
     if (timeEl) timeEl.textContent = formatTime(now);
     if (dateEl) dateEl.textContent = formatDate(now);
+    if (greetingEl) greetingEl.textContent = greetingForHour(now.getHours());
   }
   tick();
   setInterval(tick, 1000);
 }
 
-// ===== Pomodoro Timer =====
-const DEFAULT_SECONDS = 25 * 60; // 25 minutes
-let remaining = DEFAULT_SECONDS;
-let running = false;
-let intervalId = null;
+// ===== Pomodoro Timer (synced with clocktimer.php) =====
+const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
+const POMODORO_SETTINGS = {
+  focusMinutes: 'intelliplan:pomodoroFocusMinutes',
+  breakMinutes: 'intelliplan:pomodoroShortBreakMinutes',
+  alertSound: 'intelliplan:pomodoroAlertSound',
+};
 
-const labelEl = document.getElementById("timerLabel");
-const ringEl = document.getElementById("timerRing");
-const startPauseBtn = document.getElementById("btnStartPause");
-const resetBtn = document.getElementById("btnReset");
+let pomodoroTicker = null;
+let audioCtx = null;
 
-function renderTimer() {
-  const m = Math.floor(remaining / 60).toString().padStart(2, "0");
-  const s = Math.floor(remaining % 60).toString().padStart(2, "0");
-  if (labelEl) labelEl.textContent = `${m}:${s}`;
+function safeJsonParse(text, fallback) {
+  try { return JSON.parse(text); } catch { return fallback; }
+}
 
-  const progress = 1 - remaining / DEFAULT_SECONDS; // 0..1
+function getIntSetting(key, fallback) {
+  const raw = localStorage.getItem(key);
+  const n = parseInt(raw || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function getBoolSetting(key, fallback) {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  return raw === '1' || raw === 'true' || raw === 'on' || raw === 'yes';
+}
+
+function loadPomodoroSettings() {
+  const focusMinutes = getIntSetting(POMODORO_SETTINGS.focusMinutes, 25);
+  const breakMinutes = getIntSetting(POMODORO_SETTINGS.breakMinutes, 5);
+  const alertSound = getBoolSetting(POMODORO_SETTINGS.alertSound, true);
+  return {
+    focusSeconds: focusMinutes * 60,
+    breakSeconds: breakMinutes * 60,
+    alertSound,
+  };
+}
+
+function loadPomodoroState() {
+  const settings = loadPomodoroSettings();
+  const stored = safeJsonParse(localStorage.getItem(POMODORO_STATE_KEY) || '', null);
+
+  const base = {
+    running: false,
+    mode: 'focus',
+    remainingSeconds: settings.focusSeconds,
+    endAtMs: null,
+    focusSeconds: settings.focusSeconds,
+    breakSeconds: settings.breakSeconds,
+  };
+
+  if (!stored || typeof stored !== 'object') return base;
+
+  const next = {
+    ...base,
+    ...stored,
+    focusSeconds: settings.focusSeconds,
+    breakSeconds: settings.breakSeconds,
+  };
+
+  next.running = !!next.running;
+  next.mode = next.mode === 'break' ? 'break' : 'focus';
+  next.remainingSeconds = Math.max(0, parseInt(next.remainingSeconds || 0, 10));
+  next.endAtMs = next.endAtMs ? Number(next.endAtMs) : null;
+
+  if (!next.running && (!Number.isFinite(next.remainingSeconds) || next.remainingSeconds <= 0)) {
+    next.remainingSeconds = next.mode === 'focus' ? next.focusSeconds : next.breakSeconds;
+  }
+
+  return next;
+}
+
+function savePomodoroState(state) {
+  localStorage.setItem(POMODORO_STATE_KEY, JSON.stringify(state));
+}
+
+function computedRemainingSeconds(state) {
+  if (!state.running || !state.endAtMs) return state.remainingSeconds;
+  const msLeft = state.endAtMs - Date.now();
+  return Math.max(0, Math.ceil(msLeft / 1000));
+}
+
+function ensureAudioUnlocked() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+}
+
+function beep() {
+  ensureAudioUnlocked();
+  if (!audioCtx || audioCtx.state !== 'running') return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.value = 880;
+  g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime + 0.26);
+}
+
+function advanceIfFinished(state) {
+  const remaining = computedRemainingSeconds(state);
+  if (!state.running || remaining > 0) return state;
+
+  const { alertSound } = loadPomodoroSettings();
+  if (alertSound) beep();
+
+  const nextMode = state.mode === 'focus' ? 'break' : 'focus';
+  const nextDuration = nextMode === 'focus' ? state.focusSeconds : state.breakSeconds;
+  return {
+    ...state,
+    mode: nextMode,
+    remainingSeconds: nextDuration,
+    endAtMs: Date.now() + nextDuration * 1000,
+    running: true,
+  };
+}
+
+function renderPomodoro() {
+  const ringEl = document.getElementById('timerRing');
+  const labelEl = document.getElementById('timerLabel');
+  const modeEl = document.getElementById('timerMode');
+  const startPauseBtn = document.getElementById('btnStartPause');
+  const resetBtn = document.getElementById('btnReset');
+  if (!ringEl || !labelEl || !startPauseBtn || !resetBtn) return;
+
+  let state = loadPomodoroState();
+  state = advanceIfFinished(state);
+
+  const remaining = computedRemainingSeconds(state);
+  const total = state.mode === 'focus' ? state.focusSeconds : state.breakSeconds;
+  const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+  const s = String(remaining % 60).padStart(2, '0');
+  labelEl.textContent = `${m}:${s}`;
+  if (modeEl) modeEl.textContent = state.mode === 'focus' ? 'Focus' : 'Short Break';
+
+  const progress = total > 0 ? (1 - remaining / total) : 0;
   const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
-  if (ringEl) {
-    ringEl.style.background =
-      `radial-gradient(closest-side, #fff 72%, transparent 73% 100%),` +
-      `conic-gradient(var(--primary) 0% ${percent}%, var(--ring) ${percent}% 100%)`;
+  ringEl.style.background =
+    `radial-gradient(closest-side, #fff 72%, transparent 73% 100%),` +
+    `conic-gradient(var(--primary) 0% ${percent}%, var(--ring) ${percent}% 100%)`;
+
+  startPauseBtn.textContent = state.running ? '⏸' : '▶';
+  startPauseBtn.setAttribute('aria-label', state.running ? 'Pause' : 'Start');
+
+  savePomodoroState({ ...state, remainingSeconds: remaining, endAtMs: state.running ? state.endAtMs : null });
+}
+
+function ensurePomodoroTicker() {
+  const ringEl = document.getElementById('timerRing');
+  const startPauseBtn = document.getElementById('btnStartPause');
+  const resetBtn = document.getElementById('btnReset');
+  if (!ringEl || !startPauseBtn || !resetBtn) return;
+
+  const state = loadPomodoroState();
+  const shouldRun = !!state.running;
+  if (shouldRun && !pomodoroTicker) {
+    pomodoroTicker = setInterval(renderPomodoro, 500);
+  }
+  if (!shouldRun && pomodoroTicker) {
+    clearInterval(pomodoroTicker);
+    pomodoroTicker = null;
   }
 }
 
-function tickTimer() {
-  if (!running) return;
-  remaining -= 1;
-  if (remaining <= 0) {
-    remaining = 0;
-    running = false;
-    clearInterval(intervalId);
-    intervalId = null;
-    // Optional: notify user
-    // alert("Pomodoro finished!");
-  }
-  renderTimer();
-}
+function initPomodoro() {
+  const startPauseBtn = document.getElementById('btnStartPause');
+  const resetBtn = document.getElementById('btnReset');
+  const ringEl = document.getElementById('timerRing');
+  if (!ringEl || !startPauseBtn || !resetBtn) return;
 
-function startTimer() {
-  if (running) return;
-  running = true;
-  startPauseBtn.textContent = "⏸";
-  startPauseBtn.setAttribute("aria-label", "Pause");
-  if (!intervalId) intervalId = setInterval(tickTimer, 1000);
-}
+  const unlock = () => ensureAudioUnlocked();
+  startPauseBtn.addEventListener('pointerdown', unlock, { passive: true });
+  resetBtn.addEventListener('pointerdown', unlock, { passive: true });
 
-function pauseTimer() {
-  running = false;
-  startPauseBtn.textContent = "▶";
-  startPauseBtn.setAttribute("aria-label", "Start");
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-}
+  startPauseBtn.addEventListener('click', () => {
+    let state = loadPomodoroState();
+    const remaining = computedRemainingSeconds(state);
 
-function resetTimer() {
-  remaining = DEFAULT_SECONDS;
-  pauseTimer();
-  renderTimer();
-}
+    if (state.running) {
+      state = { ...state, running: false, remainingSeconds: remaining, endAtMs: null };
+    } else {
+      const dur = remaining > 0 ? remaining : (state.mode === 'focus' ? state.focusSeconds : state.breakSeconds);
+      state = { ...state, running: true, remainingSeconds: dur, endAtMs: Date.now() + dur * 1000 };
+    }
 
-// Wire up buttons
-if (startPauseBtn) {
-  startPauseBtn.addEventListener("click", () => {
-    running ? pauseTimer() : startTimer();
+    savePomodoroState(state);
+    renderPomodoro();
+    ensurePomodoroTicker();
   });
+
+  resetBtn.addEventListener('click', () => {
+    const settings = loadPomodoroSettings();
+    const state = {
+      running: false,
+      mode: 'focus',
+      remainingSeconds: settings.focusSeconds,
+      endAtMs: null,
+      focusSeconds: settings.focusSeconds,
+      breakSeconds: settings.breakSeconds,
+    };
+    savePomodoroState(state);
+    renderPomodoro();
+    ensurePomodoroTicker();
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (!e.key) return;
+    if (e.key === POMODORO_STATE_KEY || Object.values(POMODORO_SETTINGS).includes(e.key)) {
+      renderPomodoro();
+      ensurePomodoroTicker();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    renderPomodoro();
+    ensurePomodoroTicker();
+  });
+  window.addEventListener('focus', () => {
+    renderPomodoro();
+    ensurePomodoroTicker();
+  });
+
+  renderPomodoro();
+  ensurePomodoroTicker();
 }
-if (resetBtn) {
-  resetBtn.addEventListener("click", resetTimer);
+
+// ===== Dashboard mini calendar (real-time week + today highlight) =====
+let dashboardSelectedIso = null;
+function startOfWeekMonday(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = (d.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  d.setDate(d.getDate() - day);
+  return d;
+}
+
+function toIsoDate(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function renderDashboardWeekCalendar() {
+  const weekEl = document.querySelector('.calendar-week');
+  if (!weekEl) return;
+
+  const days = Array.from(weekEl.querySelectorAll('button.weekday'));
+  if (days.length === 0) return;
+
+  const now = new Date();
+  const todayIso = toIsoDate(now);
+  const weekStart = startOfWeekMonday(now);
+
+  if (!dashboardSelectedIso) dashboardSelectedIso = todayIso;
+
+  for (let i = 0; i < days.length; i++) {
+    const cell = days[i];
+    const nameEl = cell.querySelector('.wd-name');
+    const numEl = cell.querySelector('.wd-num');
+    if (!nameEl || !numEl) continue;
+
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const iso = toIsoDate(d);
+
+    const short = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    nameEl.textContent = short;
+    numEl.textContent = String(d.getDate());
+
+    cell.dataset.date = iso;
+    cell.setAttribute('aria-label', iso);
+
+    if (iso === dashboardSelectedIso) cell.classList.add('active');
+    else cell.classList.remove('active');
+  }
+
+  renderDashboardSelectedDayChip();
+}
+
+function renderDashboardSelectedDayChip() {
+  const nameEl = document.getElementById('dashSelectedDayName');
+  const numEl = document.getElementById('dashSelectedDayNum');
+  if (!nameEl || !numEl || !dashboardSelectedIso) return;
+
+  const d = new Date(dashboardSelectedIso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return;
+
+  const dayName = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+  nameEl.textContent = dayName;
+  numEl.textContent = String(d.getDate());
+}
+
+function setDashboardSelectedDate(iso) {
+  if (!iso) return;
+  dashboardSelectedIso = iso;
+  renderDashboardWeekCalendar();
+}
+
+function scheduleDashboardCalendarRefresh() {
+  const now = new Date();
+  const nextMidnight = new Date(now);
+  nextMidnight.setHours(24, 0, 0, 0);
+  const ms = Math.max(250, nextMidnight.getTime() - now.getTime() + 25);
+  setTimeout(() => {
+    const prevToday = toIsoDate(new Date(Date.now() - 1000));
+    const newToday = toIsoDate(new Date());
+    if (dashboardSelectedIso === prevToday) dashboardSelectedIso = newToday;
+    renderDashboardWeekCalendar();
+    scheduleDashboardCalendarRefresh();
+  }, ms);
+}
+
+function initDashboardCalendar() {
+  if (!document.querySelector('.calendar-week')) return;
+
+  renderDashboardWeekCalendar();
+  scheduleDashboardCalendarRefresh();
+
+  document.querySelector('.calendar-week')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.weekday');
+    if (!btn) return;
+    const iso = btn.dataset.date;
+    if (iso) setDashboardSelectedDate(iso);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderDashboardWeekCalendar();
+  });
+  window.addEventListener('focus', renderDashboardWeekCalendar);
 }
 
 // ===== Initialize =====
 document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
-  renderTimer();
+  initPomodoro();
+  initDashboardCalendar();
 
   // ===== Dashboard task widgets (stats + list) =====
   (async function initDashboardTasks(){
@@ -114,12 +393,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const statOverdueEl = document.getElementById('statOverdue');
     const statCompletedEl = document.getElementById('statCompleted');
     const dueTodayCountEl = document.getElementById('dueTodayCount');
+    const dashTasksCountEl = document.getElementById('dashTasksCount');
     const dashboardTasksListEl = document.getElementById('dashboardTasksList');
     const dashTasksSubjectEl = document.getElementById('dashTasksSubject');
     const dashTasksViewEl = document.getElementById('dashTasksView');
 
     // Only run on pages that actually have dashboard task widgets.
-    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl) return;
+    if (!statPendingEl && !dashboardTasksListEl && !dueTodayCountEl && !dashTasksCountEl) return;
 
     function isoToday(){
       const d = new Date();
@@ -188,7 +468,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderTaskList(tasks){
       if (!dashboardTasksListEl) return;
-      const current = filterForPanel(tasks)
+      const filtered = filterForPanel(tasks);
+      if (dashTasksCountEl) dashTasksCountEl.textContent = String(filtered.length);
+
+      const current = filtered
         .sort((a, b) => {
           const ad = a?.due_date || '';
           const bd = b?.due_date || '';
@@ -265,6 +548,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dashboardTasksListEl.classList.add('muted');
         dashboardTasksListEl.textContent = 'Failed to load tasks.';
       }
+
+      if (dashTasksCountEl) dashTasksCountEl.textContent = '0';
     }
   })();
 });

@@ -26,38 +26,157 @@
 
     if (!weekView || !monthView) return;
 
-    const events = [
-      { title: 'Project Kickoff', start: '2024-12-10T09:00:00', end: '2024-12-10T10:00:00' },
-      { title: 'Design Review', start: '2024-12-11T13:30:00', end: '2024-12-11T14:30:00' },
-      { title: 'Team Sync', start: '2024-12-12T11:00:00', end: '2024-12-12T11:30:00' },
-      { title: 'Client Call', start: '2024-12-15T15:00:00', end: '2024-12-15T15:45:00' },
-      { title: 'Sprint Planning', start: '2024-12-03T10:00:00', end: '2024-12-03T11:00:00' },
-    ];
+    let events = [];
+    let lastFetchKey = '';
+    let lastTodayIso = '';
+    let refreshTimerId = null;
+    let midnightTimerId = null;
 
     let currentDate = new Date();
     let mode = 'week';
 
-    const formatDate = (date) => date.toISOString().slice(0, 10);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const formatDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
+    const toIsoDateTimeLocal = (date, endOfDay) => {
+      const d = new Date(date);
+      if (endOfDay) d.setHours(23, 59, 59, 999);
+      else d.setHours(0, 0, 0, 0);
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    };
 
     const startOfWeek = (date) => {
       const d = new Date(date);
       const day = d.getDay();
       const diff = (day === 0 ? -6 : 1) - day; // Monday start
       d.setDate(d.getDate() + diff);
+      d.setHours(0, 0, 0, 0);
       return d;
     };
 
     const endOfWeek = (start) => {
       const d = new Date(start);
       d.setDate(d.getDate() + 6);
+      d.setHours(23, 59, 59, 999);
       return d;
     };
 
-    const renderWeek = () => {
+    async function fetchEvents(rangeStart, rangeEnd){
+      const qs = new URLSearchParams({
+        start: toIsoDateTimeLocal(rangeStart, false),
+        end: toIsoDateTimeLocal(rangeEnd, true),
+      });
+      const res = await fetch(`lib/api/calendar.php?${qs.toString()}`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Calendar API error ' + res.status);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    async function fetchTasks(rangeStart, rangeEnd){
+      const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Tasks API error ' + res.status);
+      const data = await res.json();
+      const tasks = Array.isArray(data) ? data : [];
+
+      const startIso = formatDate(rangeStart);
+      const endIso = formatDate(rangeEnd);
+
+      return tasks.filter(t => {
+        const due = (t?.due_date || '').trim();
+        if (!due) return false;
+        const status = (t?.status || 'open').toLowerCase();
+        if (status === 'done' || status === 'archived') return false;
+        return due >= startIso && due <= endIso;
+      });
+    }
+
+    function normalizeEvents(raw){
+      return raw.map(e => {
+        const start = e?.start ? new Date(e.start) : null;
+        const end = e?.end ? new Date(e.end) : null;
+        return {
+          id: e?.id,
+          title: e?.title || 'Untitled',
+          start,
+          end,
+          allDay: !!(e?.allDay || e?.all_day),
+          description: e?.description || '',
+          source: 'calendar',
+        };
+      }).filter(e => e.start instanceof Date && !isNaN(e.start));
+    }
+
+    function normalizeTaskEvents(tasks){
+      return tasks.map(t => {
+        const due = (t?.due_date || '').trim();
+        const dueTime = (t?.due_time || '').trim();
+        const start = due
+          ? new Date(due + 'T' + (dueTime ? (dueTime.length === 5 ? (dueTime + ':00') : dueTime) : '00:00:00'))
+          : null;
+        const subject = (t?.subject || '').trim();
+        const title = (t?.title || 'Task').trim();
+        return {
+          id: `task:${t?.id ?? ''}`,
+          title,
+          start,
+          end: null,
+          allDay: true,
+          description: subject,
+          source: 'task',
+          dueTime: dueTime || null,
+        };
+      }).filter(e => e.start instanceof Date && !isNaN(e.start));
+    }
+
+    async function ensureEventsLoaded(rangeStart, rangeEnd){
+      const key = `${formatDate(rangeStart)}..${formatDate(rangeEnd)}`;
+      if (key === lastFetchKey) return;
+      lastFetchKey = key;
+      let calendarPart = [];
+      let taskPart = [];
+      try {
+        const raw = await fetchEvents(rangeStart, rangeEnd);
+        calendarPart = normalizeEvents(raw);
+      } catch (err) {
+        calendarPart = [];
+      }
+      try {
+        const tasks = await fetchTasks(rangeStart, rangeEnd);
+        taskPart = normalizeTaskEvents(tasks);
+      } catch (err) {
+        taskPart = [];
+      }
+
+      events = [...calendarPart, ...taskPart];
+    }
+
+    function eventsForIsoDay(iso){
+      return events
+        .filter(ev => formatDate(ev.start) === iso)
+        .sort((a, b) => a.start - b.start);
+    }
+
+    function formatTimeRange(ev){
+      if (ev.source === 'task') return ev.dueTime ? `Due ${ev.dueTime}` : 'Due';
+      if (ev.allDay) return 'All day';
+      const start = ev.start;
+      const end = ev.end;
+      const fmt = { hour: '2-digit', minute: '2-digit' };
+      const s = start.toLocaleTimeString([], fmt);
+      if (!end || isNaN(end)) return s;
+      const e = end.toLocaleTimeString([], fmt);
+      return `${s} – ${e}`;
+    }
+
+    const renderWeek = async () => {
       const weekStart = startOfWeek(currentDate);
       const weekEnd = endOfWeek(weekStart);
       const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
       rangeLabel.textContent = `${formatter.format(weekStart)} – ${formatter.format(weekEnd)}`;
+
+      // Render quickly, then fill events after load.
+      weekView.innerHTML = '<div class="week-days"></div><div class="week-events"></div>';
+      await ensureEventsLoaded(weekStart, weekEnd);
 
       const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
       const todayStr = formatDate(new Date());
@@ -84,12 +203,12 @@
       `).join('')}</div>`;
 
       const dayEventsHtml = `<div class="week-events">${days.map(d => {
-        const dayEvents = events.filter(ev => ev.start.startsWith(d.iso));
+        const dayEvents = eventsForIsoDay(d.iso);
         const items = dayEvents.length ? dayEvents.map(ev => {
-          const start = new Date(ev.start);
-          const end = new Date(ev.end);
-          const time = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-          return `<div class="event-chip"><strong>${ev.title}</strong><span>${time}</span></div>`;
+          const time = formatTimeRange(ev);
+          const cls = ev.source === 'task' ? 'event-chip task' : 'event-chip';
+          const meta = ev.source === 'task' && ev.description ? `<span>${escapeHtml(time)} • ${escapeHtml(ev.description)}</span>` : `<span>${escapeHtml(time)}</span>`;
+          return `<div class="${cls}"><strong>${escapeHtml(ev.title)}</strong>${meta}</div>`;
         }).join('') : '<div class="event-chip" style="opacity:0.6;">No events</div>';
         return `<div class="day-column"><h4>${d.label}</h4>${items}</div>`;
       }).join('')}</div>`;
@@ -97,7 +216,7 @@
       weekView.innerHTML = dayHeaderHtml + dayEventsHtml;
     };
 
-    const renderMonth = () => {
+    const renderMonth = async () => {
       const working = new Date(currentDate);
       working.setDate(1);
       const month = working.getMonth();
@@ -110,13 +229,21 @@
       const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
       rangeLabel.textContent = formatter.format(working);
 
+      const monthStart = new Date(year, month, 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(year, month, daysInMonth);
+      monthEnd.setHours(23, 59, 59, 999);
+
+      monthView.innerHTML = '<div class="month-grid"></div>';
+      await ensureEventsLoaded(monthStart, monthEnd);
+
       const cells = [];
       // Leading blanks
       for (let i = 0; i < offset; i++) cells.push({ empty: true });
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
         const iso = formatDate(dateObj);
-        const dayEvents = events.filter(ev => ev.start.startsWith(iso));
+        const dayEvents = eventsForIsoDay(iso);
         cells.push({
           date: day,
           iso,
@@ -127,10 +254,23 @@
 
       monthView.innerHTML = `<div class="month-grid">${cells.map(cell => {
         if (cell.empty) return '<div class="month-cell" aria-hidden="true"></div>';
-        const eventsHtml = cell.events.map(ev => `<div class="event-line"><span class="event-dot"></span><span>${ev.title}</span></div>`).join('');
+        const eventsHtml = cell.events.map(ev => {
+          const dotCls = ev.source === 'task' ? 'event-dot task' : 'event-dot';
+          const lineCls = ev.source === 'task' ? 'event-line task' : 'event-line';
+          return `<div class="${lineCls}"><span class="${dotCls}"></span><span>${escapeHtml(ev.title)}</span></div>`;
+        }).join('');
         return `<div class="month-cell ${cell.isToday ? 'today' : ''}"><div class="date">${cell.date}</div>${eventsHtml}</div>`;
       }).join('')}</div>`;
     };
+
+    function escapeHtml(s){
+      return (s + '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
 
     const setMode = (nextMode) => {
       mode = nextMode;
@@ -169,5 +309,40 @@
 
     // initial render
     setMode('week');
+
+    function rerenderIfDayChanged() {
+      const nowIso = formatDate(new Date());
+      if (nowIso !== lastTodayIso) {
+        lastTodayIso = nowIso;
+        lastFetchKey = '';
+      }
+      if (mode === 'week') renderWeek(); else renderMonth();
+    }
+
+    function scheduleMidnightRefresh(){
+      if (midnightTimerId) clearTimeout(midnightTimerId);
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      const ms = Math.max(250, next.getTime() - now.getTime() + 25);
+      midnightTimerId = setTimeout(() => {
+        rerenderIfDayChanged();
+        scheduleMidnightRefresh();
+      }, ms);
+    }
+
+    // Keep "today" highlight and task/event list fresh in real time.
+    lastTodayIso = formatDate(new Date());
+    scheduleMidnightRefresh();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) rerenderIfDayChanged();
+    });
+    window.addEventListener('focus', rerenderIfDayChanged);
+
+    // Periodic refresh so newly added tasks/events appear without reload.
+    refreshTimerId = setInterval(() => {
+      lastFetchKey = '';
+      rerenderIfDayChanged();
+    }, 60 * 1000);
   });
 })();

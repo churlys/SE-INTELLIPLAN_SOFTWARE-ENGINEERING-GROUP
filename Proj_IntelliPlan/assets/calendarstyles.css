@@ -44,6 +44,11 @@ body{
   background: var(--bg-page);
 }
 
+/* Ensure tabbed views respect the `hidden` attribute */
+[hidden] {
+  display: none !important;
+}
+
 /* Content area */
 .content{
   flex:1;
@@ -214,6 +219,12 @@ body{
   gap: 4px;
 }
 
+.event-chip.task {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #0f172a;
+}
+
 .event-chip strong {
   font-size: 13px;
 }
@@ -259,6 +270,10 @@ body{
   margin-right: 6px;
 }
 
+.month-cell .event-dot.task {
+  background: #06b6d4;
+}
+
 .month-cell .event-line {
   font-size: 12px;
   color: #4b5563;
@@ -288,16 +303,7 @@ body{
   overflow: hidden;
 }
 
-/* Optional overlay for additional glow (commented per your snippet) */
-/*
-.calendar-controls::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.20);
-  pointer-events: none;
-}
-*/
+
 
 .controls-left,
 .controls-right{

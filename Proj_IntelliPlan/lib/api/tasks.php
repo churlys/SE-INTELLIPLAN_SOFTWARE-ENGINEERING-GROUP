@@ -34,11 +34,13 @@ function ensure_tasks_schema(PDO $pdo): void {
     "  details TEXT NULL,\n" .
     "  subject VARCHAR(100) NULL,\n" .
     "  due_date DATE NULL,\n" .
+    "  due_time TIME NULL,\n" .
     "  status VARCHAR(20) NOT NULL DEFAULT 'open',\n" .
     "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
     "  PRIMARY KEY (id),\n" .
     "  KEY idx_tasks_user (user_id),\n" .
-    "  KEY idx_tasks_due (due_date)\n" .
+    "  KEY idx_tasks_due (due_date),\n" .
+    "  KEY idx_tasks_due_time (due_time)\n" .
     ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
 
@@ -52,6 +54,7 @@ function ensure_tasks_schema(PDO $pdo): void {
     if (!isset($existing['details'])) $alter[] = "ADD COLUMN details TEXT NULL";
     if (!isset($existing['subject'])) $alter[] = "ADD COLUMN subject VARCHAR(100) NULL";
     if (!isset($existing['due_date'])) $alter[] = "ADD COLUMN due_date DATE NULL";
+    if (!isset($existing['due_time'])) $alter[] = "ADD COLUMN due_time TIME NULL";
     if (!isset($existing['status'])) $alter[] = "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'open'";
     if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP";
     if ($alter) {
@@ -92,7 +95,7 @@ try {
     }
 
     // Order without relying on created_at (older schemas may not have it).
-    $sql = 'SELECT id, title, details, subject, DATE(due_date) AS due_date, status FROM tasks WHERE ' . implode(' AND ', $where) . ' ORDER BY due_date IS NULL, due_date ASC, id DESC';
+    $sql = 'SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE ' . implode(' AND ', $where) . ' ORDER BY due_date IS NULL, due_date ASC, due_time IS NULL, due_time ASC, id DESC';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -105,13 +108,14 @@ try {
     $details = $input['details'] ?? null;
     $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
     $due = $input['due_date'] ?? null;
+    $dueTime = $input['due_time'] ?? null;
     if ($title === '') { http_response_code(400); echo json_encode(['error' => 'Missing title']); exit; }
 
-    $stmt = $pdo->prepare('INSERT INTO tasks (user_id, title, details, subject, due_date) VALUES (?, ?, ?, ?, ?)');
-    $stmt->execute([$user['id'], $title, $details, $subject, $due]);
+    $stmt = $pdo->prepare('INSERT INTO tasks (user_id, title, details, subject, due_date, due_time) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$user['id'], $title, $details, $subject, $due, $dueTime]);
     $id = (int)$pdo->lastInsertId();
 
-    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, status FROM tasks WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $task = $stmt->fetch(PDO::FETCH_ASSOC);
     echo json_encode($task);
@@ -131,12 +135,13 @@ try {
     $details = $input['details'] ?? null;
     $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
     $due = $input['due_date'] ?? null;
+    $dueTime = $input['due_time'] ?? null;
     $status = $input['status'] ?? 'open';
 
-    $stmt = $pdo->prepare('UPDATE tasks SET title = ?, details = ?, subject = ?, due_date = ?, status = ? WHERE id = ? AND user_id = ?');
-    $stmt->execute([$title, $details, $subject, $due, $status, $id, $user['id']]);
+    $stmt = $pdo->prepare('UPDATE tasks SET title = ?, details = ?, subject = ?, due_date = ?, due_time = ?, status = ? WHERE id = ? AND user_id = ?');
+    $stmt->execute([$title, $details, $subject, $due, $dueTime, $status, $id, $user['id']]);
 
-    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, status FROM tasks WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $task = $stmt->fetch(PDO::FETCH_ASSOC);
     echo json_encode($task);

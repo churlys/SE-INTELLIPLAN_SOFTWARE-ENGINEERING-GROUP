@@ -34,8 +34,8 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       <div class="brand-name">IntelliPlan</div>
     </div>
     <nav class="nav">
-      <a class="nav-item" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
-      <a class="nav-item" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'calendar.php') ? 'active' : ''; ?>" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
       <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
         <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
           <span class="nav-icon">🧩</span>
