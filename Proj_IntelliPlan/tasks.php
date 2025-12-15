@@ -74,7 +74,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
           <div class="tasks-tabs" role="tablist" aria-label="Task filter">
             <button type="button" class="tasks-tab active" data-view="current" role="tab" aria-selected="true">Current</button>
-            <button type="button" class="tasks-tab" data-view="past" role="tab" aria-selected="false">Past</button>
+            <button type="button" class="tasks-tab" data-view="past" role="tab" aria-selected="false">Completed</button>
             <button type="button" class="tasks-tab" data-view="overdue" role="tab" aria-selected="false">Overdue</button>
           </div>
 
@@ -138,7 +138,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     const openAddTaskBtn = document.getElementById('openAddTask');
     const addTaskPanel = document.getElementById('addTaskPanel');
     const cancelAddTaskBtn = document.getElementById('cancelAddTask');
-    const addTaskForm = document.getElementById('addTaskForm');
+     const addTaskForm = document.getElementById('addTaskForm');
     const addTaskError = document.getElementById('addTaskError');
 
     let allTasks = [];
@@ -259,7 +259,32 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         left.appendChild(check);
         left.appendChild(main);
 
+        // Right-side controls (delete for overdue)
+        const right = document.createElement('div');
+        right.className = 'task-right';
+
+        const isOverdue = (currentView === 'overdue');
+        if (isOverdue) {
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'task-delete';
+          del.setAttribute('aria-label', 'Delete task');
+          del.title = 'Delete task';
+          del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+          del.addEventListener('click', async () => {
+            if (!confirm('Delete this overdue task? This cannot be undone.')) return;
+            try {
+              await deleteTask(t.id);
+              await refreshTasks();
+            } catch (e) {
+              alert('Failed to delete: ' + (e.message || e));
+            }
+          });
+          right.appendChild(del);
+        }
+
         card.appendChild(left);
+        card.appendChild(right);
         tasksListEl.appendChild(card);
       });
     }
@@ -299,6 +324,18 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Request failed ' + res.status));
+      return data;
+    }
+
+    async function deleteTask(id){
+      const res = await fetch('lib/api/tasks.php', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || ('Request failed ' + res.status));
