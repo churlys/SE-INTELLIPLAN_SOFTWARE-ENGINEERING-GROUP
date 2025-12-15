@@ -30,7 +30,7 @@ function startLiveClock() {
   setInterval(tick, 1000);
 }
 
-// ===== Pomodoro Timer =====
+// ===== Pomodoro Timer (synced with clocktimer.php) =====
 const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
 const POMODORO_SETTINGS = {
   focusMinutes: 'intelliplan:pomodoroFocusMinutes',
@@ -90,13 +90,11 @@ function loadPomodoroState() {
     breakSeconds: settings.breakSeconds,
   };
 
-  // Normalize types
   next.running = !!next.running;
   next.mode = next.mode === 'break' ? 'break' : 'focus';
   next.remainingSeconds = Math.max(0, parseInt(next.remainingSeconds || 0, 10));
   next.endAtMs = next.endAtMs ? Number(next.endAtMs) : null;
 
-  // Ensure remaining is set sensibly when stopped
   if (!next.running && (!Number.isFinite(next.remainingSeconds) || next.remainingSeconds <= 0)) {
     next.remainingSeconds = next.mode === 'focus' ? next.focusSeconds : next.breakSeconds;
   }
@@ -186,7 +184,6 @@ function renderPomodoro() {
   startPauseBtn.textContent = state.running ? '⏸' : '▶';
   startPauseBtn.setAttribute('aria-label', state.running ? 'Pause' : 'Start');
 
-  // Persist any auto-advance changes.
   savePomodoroState({ ...state, remainingSeconds: remaining, endAtMs: state.running ? state.endAtMs : null });
 }
 
@@ -269,10 +266,117 @@ function initPomodoro() {
   ensurePomodoroTicker();
 }
 
+// ===== Dashboard mini calendar (real-time week + today highlight) =====
+let dashboardSelectedIso = null;
+function startOfWeekMonday(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = (d.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  d.setDate(d.getDate() - day);
+  return d;
+}
+
+function toIsoDate(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function renderDashboardWeekCalendar() {
+  const weekEl = document.querySelector('.calendar-week');
+  if (!weekEl) return;
+
+  const days = Array.from(weekEl.querySelectorAll('button.weekday'));
+  if (days.length === 0) return;
+
+  const now = new Date();
+  const todayIso = toIsoDate(now);
+  const weekStart = startOfWeekMonday(now);
+
+  if (!dashboardSelectedIso) dashboardSelectedIso = todayIso;
+
+  for (let i = 0; i < days.length; i++) {
+    const cell = days[i];
+    const nameEl = cell.querySelector('.wd-name');
+    const numEl = cell.querySelector('.wd-num');
+    if (!nameEl || !numEl) continue;
+
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const iso = toIsoDate(d);
+
+    const short = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    nameEl.textContent = short;
+    numEl.textContent = String(d.getDate());
+
+    cell.dataset.date = iso;
+    cell.setAttribute('aria-label', iso);
+
+    if (iso === dashboardSelectedIso) cell.classList.add('active');
+    else cell.classList.remove('active');
+  }
+
+  renderDashboardSelectedDayChip();
+}
+
+function renderDashboardSelectedDayChip() {
+  const nameEl = document.getElementById('dashSelectedDayName');
+  const numEl = document.getElementById('dashSelectedDayNum');
+  if (!nameEl || !numEl || !dashboardSelectedIso) return;
+
+  const d = new Date(dashboardSelectedIso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return;
+
+  const dayName = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+  nameEl.textContent = dayName;
+  numEl.textContent = String(d.getDate());
+}
+
+function setDashboardSelectedDate(iso) {
+  if (!iso) return;
+  dashboardSelectedIso = iso;
+  renderDashboardWeekCalendar();
+}
+
+function scheduleDashboardCalendarRefresh() {
+  const now = new Date();
+  const nextMidnight = new Date(now);
+  nextMidnight.setHours(24, 0, 0, 0);
+  const ms = Math.max(250, nextMidnight.getTime() - now.getTime() + 25);
+  setTimeout(() => {
+    const prevToday = toIsoDate(new Date(Date.now() - 1000));
+    const newToday = toIsoDate(new Date());
+    if (dashboardSelectedIso === prevToday) dashboardSelectedIso = newToday;
+    renderDashboardWeekCalendar();
+    scheduleDashboardCalendarRefresh();
+  }, ms);
+}
+
+function initDashboardCalendar() {
+  if (!document.querySelector('.calendar-week')) return;
+
+  renderDashboardWeekCalendar();
+  scheduleDashboardCalendarRefresh();
+
+  document.querySelector('.calendar-week')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.weekday');
+    if (!btn) return;
+    const iso = btn.dataset.date;
+    if (iso) setDashboardSelectedDate(iso);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderDashboardWeekCalendar();
+  });
+  window.addEventListener('focus', renderDashboardWeekCalendar);
+}
+
 // ===== Initialize =====
 document.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
   initPomodoro();
+  initDashboardCalendar();
 
   // ===== Dashboard task widgets (stats + list) =====
   (async function initDashboardTasks(){

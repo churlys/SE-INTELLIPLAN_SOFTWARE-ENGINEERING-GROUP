@@ -210,7 +210,6 @@ body {
   align-items: center;
   justify-content: center;
 }
-
 .circle-btn {
   width: 42px; height: 42px;
   border-radius: 50%;
@@ -278,31 +277,64 @@ body {
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+.pill-caret { color: var(--muted); font-weight: 800; }
 .calendar-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 .weekday {
+  border: 0;
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 10px 8px;
   display: grid;
-  grid-template-rows: auto auto;
   gap: 6px;
   justify-items: center;
-}
-.wd-name { color: var(--muted); font-size: 12px; }
-.wd-day {
-  width: 40px; height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #fff;
   cursor: pointer;
-  font-weight: 700;
 }
-.weekday.active .wd-day {
+.wd-name { color: var(--muted); font-size: 12px; font-weight: 700; }
+.wd-num { font-size: 18px; font-weight: 800; color: var(--text); }
+.weekday.active {
   background: var(--primary);
+}
+.weekday.active .wd-name,
+.weekday.active .wd-num {
   color: #fff;
-  border-color: var(--primary);
+}
+
+.calendar-dayline {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: start;
+  gap: 10px;
+}
+.daychip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.daychip-name {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.daychip-num {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  background: var(--panel);
+  font-weight: 800;
 }
 .calendar-hours { display: grid; gap: 10px; }
 .hour-row {
@@ -310,6 +342,8 @@ body {
   grid-template-columns: 64px 1fr;
   align-items: start;
   gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 .hour { color: var(--muted); font-size: 12px; }
 

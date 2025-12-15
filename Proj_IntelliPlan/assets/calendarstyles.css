@@ -44,6 +44,11 @@ body{
   background: var(--bg-page);
 }
 
+/* Ensure tabbed views respect the `hidden` attribute */
+[hidden] {
+  display: none !important;
+}
+
 /* Content area */
 .content{
   flex:1;

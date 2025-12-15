@@ -29,6 +29,8 @@
     let events = [];
     let lastFetchKey = '';
     let lastTodayIso = '';
+    let refreshTimerId = null;
+    let midnightTimerId = null;
 
     let currentDate = new Date();
     let mode = 'week';
@@ -70,6 +72,24 @@
       return Array.isArray(data) ? data : [];
     }
 
+    async function fetchTasks(rangeStart, rangeEnd){
+      const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Tasks API error ' + res.status);
+      const data = await res.json();
+      const tasks = Array.isArray(data) ? data : [];
+
+      const startIso = formatDate(rangeStart);
+      const endIso = formatDate(rangeEnd);
+
+      return tasks.filter(t => {
+        const due = (t?.due_date || '').trim();
+        if (!due) return false;
+        const status = (t?.status || 'open').toLowerCase();
+        if (status === 'done') return false;
+        return due >= startIso && due <= endIso;
+      });
+    }
+
     function normalizeEvents(raw){
       return raw.map(e => {
         const start = e?.start ? new Date(e.start) : null;
@@ -81,6 +101,23 @@
           end,
           allDay: !!(e?.allDay || e?.all_day),
           description: e?.description || '',
+          source: 'calendar',
+        };
+      }).filter(e => e.start instanceof Date && !isNaN(e.start));
+    }
+
+    function normalizeTaskEvents(tasks){
+      return tasks.map(t => {
+        const due = (t?.due_date || '').trim();
+        const start = due ? new Date(due + 'T00:00:00') : null;
+        return {
+          id: `task:${t?.id ?? ''}`,
+          title: t?.title || 'Task',
+          start,
+          end: null,
+          allDay: true,
+          description: '',
+          source: 'task',
         };
       }).filter(e => e.start instanceof Date && !isNaN(e.start));
     }
@@ -90,8 +127,11 @@
       if (key === lastFetchKey) return;
       lastFetchKey = key;
       try {
-        const raw = await fetchEvents(rangeStart, rangeEnd);
-        events = normalizeEvents(raw);
+        const [raw, tasks] = await Promise.all([
+          fetchEvents(rangeStart, rangeEnd),
+          fetchTasks(rangeStart, rangeEnd),
+        ]);
+        events = [...normalizeEvents(raw), ...normalizeTaskEvents(tasks)];
       } catch (err) {
         // Fail soft: render empty calendar if API fails.
         events = [];
@@ -105,6 +145,7 @@
     }
 
     function formatTimeRange(ev){
+      if (ev.source === 'task') return 'Due';
       if (ev.allDay) return 'All day';
       const start = ev.start;
       const end = ev.end;
@@ -251,16 +292,39 @@
     // initial render
     setMode('week');
 
-    // Keep "today" highlight correct in real time (updates after midnight).
-    lastTodayIso = formatDate(new Date());
-    setInterval(() => {
+    function rerenderIfDayChanged() {
       const nowIso = formatDate(new Date());
       if (nowIso !== lastTodayIso) {
         lastTodayIso = nowIso;
-        // Force refetch + rerender on day change.
         lastFetchKey = '';
-        if (mode === 'week') renderWeek(); else renderMonth();
       }
-    }, 30 * 1000);
+      if (mode === 'week') renderWeek(); else renderMonth();
+    }
+
+    function scheduleMidnightRefresh(){
+      if (midnightTimerId) clearTimeout(midnightTimerId);
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      const ms = Math.max(250, next.getTime() - now.getTime() + 25);
+      midnightTimerId = setTimeout(() => {
+        rerenderIfDayChanged();
+        scheduleMidnightRefresh();
+      }, ms);
+    }
+
+    // Keep "today" highlight and task/event list fresh in real time.
+    lastTodayIso = formatDate(new Date());
+    scheduleMidnightRefresh();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) rerenderIfDayChanged();
+    });
+    window.addEventListener('focus', rerenderIfDayChanged);
+
+    // Periodic refresh so newly added tasks/events appear without reload.
+    refreshTimerId = setInterval(() => {
+      lastFetchKey = '';
+      rerenderIfDayChanged();
+    }, 60 * 1000);
   });
 })();

@@ -156,39 +156,47 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="calendar-header">
             <span>Calendar</span>
             <div class="select-wrap">
-              <button class="pill">Day</button>
+              <button class="pill" type="button" aria-label="Calendar view">Day <span class="pill-caret">▾</span></button>
             </div>
           </div>
 
           <div class="calendar-week">
-            <div class="weekday">
+            <button class="weekday" type="button">
               <div class="wd-name">Mon</div>
-              <button class="wd-day">1</button>
-            </div>
-            <div class="weekday">
+              <div class="wd-num">1</div>
+            </button>
+            <button class="weekday" type="button">
               <div class="wd-name">Tue</div>
-              <button class="wd-day">2</button>
-            </div>
-            <div class="weekday active">
+              <div class="wd-num">2</div>
+            </button>
+            <button class="weekday active" type="button">
               <div class="wd-name">Wed</div>
-              <button class="wd-day">3</button>
-            </div>
-            <div class="weekday">
+              <div class="wd-num">3</div>
+            </button>
+            <button class="weekday" type="button">
               <div class="wd-name">Thu</div>
-              <button class="wd-day">4</button>
-            </div>
-            <div class="weekday">
+              <div class="wd-num">4</div>
+            </button>
+            <button class="weekday" type="button">
               <div class="wd-name">Fri</div>
-              <button class="wd-day">5</button>
-            </div>
-            <div class="weekday">
+              <div class="wd-num">5</div>
+            </button>
+            <button class="weekday" type="button">
               <div class="wd-name">Sat</div>
-              <button class="wd-day">6</button>
-            </div>
-            <div class="weekday">
+              <div class="wd-num">6</div>
+            </button>
+            <button class="weekday" type="button">
               <div class="wd-name">Sun</div>
-              <button class="wd-day">7</button>
+              <div class="wd-num">7</div>
+            </button>
+          </div>
+
+          <div class="calendar-dayline" aria-label="Selected day">
+            <div class="daychip" aria-label="Selected date">
+              <div class="daychip-name" id="dashSelectedDayName">MON</div>
+              <div class="daychip-num" id="dashSelectedDayNum">15</div>
             </div>
+            <div aria-hidden="true"></div>
           </div>
 
           <div class="calendar-hours">
