@@ -47,7 +47,6 @@ $csrf = csrf_token();
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sign up — IntelliPlan</title>
-
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body class="auth-page">

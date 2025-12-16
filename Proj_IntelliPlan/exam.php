@@ -26,6 +26,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Exams — IntelliPlan</title>
   <link rel="stylesheet" href="assets/styles-dashboard.css">
+
 </head>
 <body>
   <aside class="sidebar">
