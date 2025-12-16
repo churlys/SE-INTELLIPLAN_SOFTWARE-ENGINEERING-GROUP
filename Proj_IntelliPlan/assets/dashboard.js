@@ -780,6 +780,86 @@ document.addEventListener("DOMContentLoaded", () => {
   initPomodoro();
   initDashboardCalendar();
 
+  // ===== Dashboard classes panel =====
+  (async function initDashboardClasses(){
+    const listEl = document.getElementById('dashboardClassesList');
+    if (!listEl) return;
+
+    function escapeHtml(s){
+      return (s + '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function formatTimeAmerican(timeStr){
+      if (!timeStr) return '';
+      const parts = String(timeStr).split(':');
+      const h = parseInt(parts[0] || '0', 10);
+      const m = parseInt(parts[1] || '0', 10);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayHour = (h % 12) || 12;
+      return `${displayHour}:${String(m).padStart(2,'0')} ${ampm}`;
+    }
+
+    async function fetchClasses(){
+      const data = await fetchJson('lib/api/classes.php?view=current');
+      return Array.isArray(data) ? data : [];
+    }
+
+    function render(classes){
+      const current = (classes || [])
+        .filter(c => String(c?.status || 'active').toLowerCase() !== 'archived')
+        .sort((a, b) => {
+          const as = a?.start_time || '';
+          const bs = b?.start_time || '';
+          if (as && bs && as !== bs) return as.localeCompare(bs);
+          if (as && !bs) return -1;
+          if (!as && bs) return 1;
+          return String(a?.subject || a?.name || '').localeCompare(String(b?.subject || b?.name || ''));
+        })
+        .slice(0, 5);
+
+      if (current.length === 0) {
+        listEl.classList.add('muted');
+        listEl.textContent = 'No classes to display.';
+        return;
+      }
+
+      listEl.classList.remove('muted');
+      listEl.innerHTML = '';
+      current.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'dash-task-item';
+        const title = (c?.subject || c?.name || 'Untitled').trim();
+        const meta = [];
+        if (c?.days) meta.push(String(c.days).split(',').map(s => s.trim()).filter(Boolean).join(', '));
+        if (c?.start_time && c?.end_time) {
+          meta.push(`${formatTimeAmerican(c.start_time)} - ${formatTimeAmerican(c.end_time)}`);
+        } else if (c?.time) {
+          meta.push(String(c.time));
+        }
+        if (c?.professor) meta.push(String(c.professor));
+
+        row.innerHTML = `
+          <div class="dash-task-title">${escapeHtml(title)}</div>
+          ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    try {
+      const classes = await fetchClasses();
+      render(classes);
+    } catch (e) {
+      listEl.classList.add('muted');
+      listEl.textContent = 'Failed to load classes.';
+    }
+  })();
+
   // ===== Dashboard task widgets (stats + list) =====
   (async function initDashboardTasks(){
     const statPendingEl = document.getElementById('statPending');

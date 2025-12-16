@@ -217,7 +217,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                 <div class="select">Current</div>
               </div>
             </div>
-          <div class="panel-body muted">No classes to display.</div>
+          <div class="panel-body" id="dashboardClassesList">Loading classes…</div>
         </div>
 
         <div class="panel">
