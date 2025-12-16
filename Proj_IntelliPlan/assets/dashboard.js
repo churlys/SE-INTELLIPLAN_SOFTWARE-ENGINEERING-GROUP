@@ -277,6 +277,7 @@ function initPomodoro() {
 
 // ===== Dashboard mini calendar (real-time week + today highlight) =====
 let dashboardSelectedIso = null;
+let dashboardCalendarView = 'day';
 function startOfWeekMonday(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -345,7 +346,7 @@ function renderDashboardSelectedDayChip() {
 function setDashboardSelectedDate(iso) {
   if (!iso) return;
   dashboardSelectedIso = iso;
-  renderDashboardWeekCalendar();
+  renderDashboardCalendar();
 }
 
 function scheduleDashboardCalendarRefresh() {
@@ -357,15 +358,89 @@ function scheduleDashboardCalendarRefresh() {
     const prevToday = toIsoDate(new Date(Date.now() - 1000));
     const newToday = toIsoDate(new Date());
     if (dashboardSelectedIso === prevToday) dashboardSelectedIso = newToday;
-    renderDashboardWeekCalendar();
+    renderDashboardCalendar();
     scheduleDashboardCalendarRefresh();
   }, ms);
+}
+
+function renderDashboardMonthCalendar() {
+  const monthEl = document.getElementById('dashCalendarMonth');
+  if (!monthEl) return;
+
+  const base = dashboardSelectedIso ? new Date(dashboardSelectedIso + 'T00:00:00') : new Date();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+
+  const firstOfMonth = new Date(year, month, 1);
+  const gridStart = startOfWeekMonday(firstOfMonth);
+
+  const daysShort = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const currentMonth = month;
+
+  const frag = document.createDocumentFragment();
+
+  const header = document.createElement('div');
+  header.className = 'calendar-month-header';
+  daysShort.forEach(n => {
+    const h = document.createElement('div');
+    h.className = 'month-header-cell';
+    h.textContent = n;
+    header.appendChild(h);
+  });
+  frag.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'calendar-month-grid';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    const iso = toIsoDate(d);
+
+    const btn = document.createElement('button');
+    btn.className = 'weekday monthday';
+    btn.type = 'button';
+    btn.dataset.date = iso;
+    btn.setAttribute('aria-label', iso);
+    btn.textContent = String(d.getDate());
+
+    if (d.getMonth() !== currentMonth) btn.classList.add('muted');
+    if (iso === dashboardSelectedIso) btn.classList.add('active');
+
+    grid.appendChild(btn);
+  }
+  frag.appendChild(grid);
+
+  monthEl.innerHTML = '';
+  monthEl.appendChild(frag);
+
+  renderDashboardSelectedDayChip();
+}
+
+function renderDashboardCalendar() {
+  const weekEl = document.querySelector('.calendar-week');
+  const monthEl = document.getElementById('dashCalendarMonth');
+  const daylineEl = document.querySelector('.calendar-dayline');
+  const hoursEl = document.querySelector('.calendar-hours');
+
+  if (dashboardCalendarView === 'month') {
+    if (weekEl) weekEl.hidden = true;
+    if (monthEl) monthEl.hidden = false;
+    if (daylineEl) daylineEl.hidden = false;
+    if (hoursEl) hoursEl.hidden = true;
+    renderDashboardMonthCalendar();
+  } else {
+    if (weekEl) weekEl.hidden = false;
+    if (monthEl) monthEl.hidden = true;
+    if (daylineEl) daylineEl.hidden = false;
+    if (hoursEl) hoursEl.hidden = (dashboardCalendarView !== 'day');
+    renderDashboardWeekCalendar();
+  }
 }
 
 function initDashboardCalendar() {
   if (!document.querySelector('.calendar-week')) return;
 
-  renderDashboardWeekCalendar();
+  renderDashboardCalendar();
   scheduleDashboardCalendarRefresh();
 
   document.querySelector('.calendar-week')?.addEventListener('click', (e) => {
@@ -375,10 +450,34 @@ function initDashboardCalendar() {
     if (iso) setDashboardSelectedDate(iso);
   });
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) renderDashboardWeekCalendar();
+  const todayBtn = document.getElementById('dashTodayBtn');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const todayIso = toIsoDate(new Date());
+      setDashboardSelectedDate(todayIso);
+    });
+  }
+
+  const viewSel = document.getElementById('dashCalendarView');
+  if (viewSel) {
+    dashboardCalendarView = (viewSel.value || 'day').toLowerCase();
+    viewSel.addEventListener('change', () => {
+      dashboardCalendarView = (viewSel.value || 'day').toLowerCase();
+      renderDashboardCalendar();
+    });
+  }
+
+  document.getElementById('dashCalendarMonth')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.monthday');
+    if (!btn) return;
+    const iso = btn.dataset.date;
+    if (iso) setDashboardSelectedDate(iso);
   });
-  window.addEventListener('focus', renderDashboardWeekCalendar);
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) renderDashboardCalendar();
+  });
+  window.addEventListener('focus', renderDashboardCalendar);
 }
 
 // ===== Initialize =====
