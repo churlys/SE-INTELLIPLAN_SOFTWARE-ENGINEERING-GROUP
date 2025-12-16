@@ -277,6 +277,285 @@ function initPomodoro() {
 
 // ===== Dashboard mini calendar (real-time week + today highlight) =====
 let dashboardSelectedIso = null;
+let dashboardCalendarView = 'day';
+
+function parseTimeParts(timeStr) {
+  if (!timeStr) return null;
+  const parts = String(timeStr).split(':');
+  const hh = parseInt(parts[0] || '', 10);
+  const mm = parseInt(parts[1] || '0', 10);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  return { hh, mm };
+}
+
+function formatHm12(hh, mm) {
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const h12 = (hh % 12) || 12;
+  const m2 = String(mm).padStart(2, '0');
+  return `${h12}:${m2} ${ampm}`;
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Network error ' + res.status);
+  return await res.json();
+}
+
+// Week indicators (class dots)
+let dashboardClassesCache = null;
+let dashboardClassesCacheAt = 0;
+
+async function getDashboardClassesCached() {
+  const now = Date.now();
+  if (dashboardClassesCache && (now - dashboardClassesCacheAt) < 30_000) return dashboardClassesCache;
+  try {
+    const data = await fetchJson('lib/api/classes.php?view=current');
+    dashboardClassesCache = Array.isArray(data) ? data : [];
+  } catch {
+    dashboardClassesCache = [];
+  }
+  dashboardClassesCacheAt = now;
+  return dashboardClassesCache;
+}
+
+function dayAbbrevForDate(date) {
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
+}
+
+function classMatchesIsoDate(cls, iso, dayAbbrev) {
+  if (!cls) return false;
+  const status = String(cls?.status || 'active').toLowerCase();
+  if (status === 'archived') return false;
+
+  const startsAt = cls?.starts_at ? new Date(cls.starts_at) : null;
+  if (startsAt && !Number.isNaN(startsAt.getTime())) {
+    return toIsoDate(startsAt) === iso;
+  }
+
+  const daysRaw = String(cls?.days || '').trim();
+  if (!daysRaw || !dayAbbrev) return false;
+  const days = daysRaw.split(',').map(s => s.trim()).filter(Boolean);
+  return days.includes(dayAbbrev);
+}
+
+function ensureWeekdayDot(buttonEl) {
+  if (!buttonEl) return null;
+  let dot = buttonEl.querySelector('.wd-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'wd-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    buttonEl.appendChild(dot);
+  }
+  return dot;
+}
+
+async function refreshDashboardWeekIndicators() {
+  const weekEl = document.querySelector('.calendar-week');
+  if (!weekEl) return;
+  const dayButtons = Array.from(weekEl.querySelectorAll('button.weekday'));
+  if (dayButtons.length === 0) return;
+
+  const classes = await getDashboardClassesCached();
+  dayButtons.forEach((btn) => {
+    ensureWeekdayDot(btn);
+    const iso = btn.dataset.date;
+    if (!iso) {
+      btn.classList.remove('has-items');
+      return;
+    }
+    const d = new Date(iso + 'T00:00:00');
+    const dayAbbrev = Number.isNaN(d.getTime()) ? null : dayAbbrevForDate(d);
+    const hasClass = classes.some((c) => classMatchesIsoDate(c, iso, dayAbbrev));
+    btn.classList.toggle('has-items', !!hasClass);
+  });
+}
+
+// Day schedule (reminders)
+let dashboardScheduleRequestId = 0;
+const DASH_SCHEDULE_START_HOUR = 1;  // 1 AM
+const DASH_SCHEDULE_END_HOUR = 23;   // 11 PM
+const DASH_SCHEDULE_HOURS = DASH_SCHEDULE_END_HOUR - DASH_SCHEDULE_START_HOUR + 1;
+
+function hourIndexForSchedule(hh) {
+  if (!Number.isFinite(hh)) return null;
+  if (hh < DASH_SCHEDULE_START_HOUR || hh > DASH_SCHEDULE_END_HOUR) return null;
+  return hh - DASH_SCHEDULE_START_HOUR;
+}
+
+function scheduleRowTemplate(label) {
+  const row = document.createElement('div');
+  row.className = 'hour-row';
+  row.innerHTML = `
+    <div class="hour">${label}</div>
+    <div class="hour-events"></div>
+  `;
+  return row;
+}
+
+function addScheduleItem(targetEl, type, text) {
+  const div = document.createElement('div');
+  div.className = `hour-event hour-event--${type}`;
+  div.textContent = text;
+  targetEl.appendChild(div);
+}
+
+async function fetchScheduleCalendarEvents(iso) {
+  const start = `${iso} 00:00:00`;
+  const end = `${iso} 23:59:59`;
+  const url = `lib/api/calendar.php?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  const data = await fetchJson(url);
+  return Array.isArray(data) ? data : [];
+}
+
+async function fetchScheduleTasks() {
+  const data = await fetchJson('lib/api/tasks.php');
+  return Array.isArray(data) ? data : [];
+}
+
+async function fetchScheduleClasses() {
+  const data = await fetchJson('lib/api/classes.php?view=current');
+  return Array.isArray(data) ? data : [];
+}
+
+async function fetchScheduleExams(iso) {
+  const url = `lib/api/exams.php?date=${encodeURIComponent(iso)}`;
+  const data = await fetchJson(url);
+  return Array.isArray(data) ? data : [];
+}
+
+async function renderDashboardDaySchedule() {
+  const scheduleEl = document.getElementById('dashDaySchedule');
+  if (!scheduleEl) return;
+  if (dashboardCalendarView !== 'day') return;
+
+  const iso = dashboardSelectedIso || toIsoDate(new Date());
+  const requestId = ++dashboardScheduleRequestId;
+
+  const hourRows = [];
+  for (let hh = DASH_SCHEDULE_START_HOUR; hh <= DASH_SCHEDULE_END_HOUR; hh++) {
+    const label = formatHm12(hh, 0).replace(':00', '');
+    hourRows.push(scheduleRowTemplate(label));
+  }
+  scheduleEl.replaceChildren(...hourRows);
+
+  const dayAbbrev = dayAbbrevForDate(new Date(iso + 'T00:00:00'));
+
+  const results = await Promise.allSettled([
+    fetchScheduleCalendarEvents(iso),
+    fetchScheduleTasks(),
+    fetchScheduleClasses(),
+    fetchScheduleExams(iso),
+  ]);
+  if (requestId !== dashboardScheduleRequestId) return;
+
+  const calEvents = results[0].status === 'fulfilled' ? results[0].value : [];
+  const tasks = results[1].status === 'fulfilled' ? results[1].value : [];
+  const classes = results[2].status === 'fulfilled' ? results[2].value : [];
+  const exams = results[3].status === 'fulfilled' ? results[3].value : [];
+
+  const buckets = Array.from({ length: DASH_SCHEDULE_HOURS }, () => []);
+
+  calEvents.forEach((ev) => {
+    const title = (ev?.title || '').trim();
+    if (!title) return;
+    if (ev?.allDay) {
+      buckets[0].push({ sort: 0, type: 'event', text: `All day — ${title}` });
+      return;
+    }
+    const startDt = ev?.start ? new Date(ev.start) : null;
+    if (!startDt || Number.isNaN(startDt.getTime())) return;
+    const hh = startDt.getHours();
+    const mm = startDt.getMinutes();
+    const idx = hourIndexForSchedule(hh);
+    if (idx === null) return;
+    buckets[idx].push({ sort: hh * 60 + mm, type: 'event', text: `${formatHm12(hh, mm)} — ${title}` });
+  });
+
+  tasks
+    .filter((t) => (t?.due_date || '') === iso)
+    .filter((t) => (String(t?.status || 'open').toLowerCase() !== 'done'))
+    .forEach((t) => {
+      const title = (t?.title || 'Untitled').trim();
+      const dueParts = parseTimeParts(t?.due_time);
+      if (!dueParts) {
+        buckets[0].push({ sort: 1, type: 'task', text: `All day — ${title}` });
+        return;
+      }
+      const idx = hourIndexForSchedule(dueParts.hh);
+      if (idx === null) return;
+      buckets[idx].push({
+        sort: dueParts.hh * 60 + dueParts.mm,
+        type: 'task',
+        text: `${formatHm12(dueParts.hh, dueParts.mm)} — ${title}`,
+      });
+    });
+
+  classes.forEach((c) => {
+    const status = String(c?.status || 'active').toLowerCase();
+    if (status === 'archived') return;
+
+    const isoDate = iso;
+    const d = new Date(isoDate + 'T00:00:00');
+    const day = Number.isNaN(d.getTime()) ? null : dayAbbrev;
+    if (!classMatchesIsoDate(c, isoDate, day)) return;
+
+    const name = (c?.subject || c?.name || '').trim();
+    if (!name) return;
+
+    const startParts = parseTimeParts(c?.start_time);
+    if (!startParts) {
+      buckets[0].push({ sort: 2, type: 'class', text: `All day — ${name}` });
+      return;
+    }
+    const idx = hourIndexForSchedule(startParts.hh);
+    if (idx === null) return;
+
+    let timeLabel = formatHm12(startParts.hh, startParts.mm);
+    const endParts = parseTimeParts(c?.end_time);
+    if (endParts) timeLabel = `${timeLabel}–${formatHm12(endParts.hh, endParts.mm)}`;
+
+    buckets[idx].push({
+      sort: startParts.hh * 60 + startParts.mm,
+      type: 'class',
+      text: `${timeLabel} — ${name}`,
+    });
+  });
+
+  exams
+    .filter((ex) => String(ex?.status || 'scheduled').toLowerCase() !== 'done')
+    .forEach((ex) => {
+      const title = (ex?.title || '').trim();
+      if (!title) return;
+      const timeParts = parseTimeParts(ex?.exam_time);
+      if (!timeParts) {
+        buckets[0].push({ sort: 3, type: 'exam', text: `All day — Exam: ${title}` });
+        return;
+      }
+      const idx = hourIndexForSchedule(timeParts.hh);
+      if (idx === null) return;
+      buckets[idx].push({
+        sort: timeParts.hh * 60 + timeParts.mm,
+        type: 'exam',
+        text: `${formatHm12(timeParts.hh, timeParts.mm)} — Exam: ${title}`,
+      });
+    });
+
+  const totalItems = buckets.reduce((acc, b) => acc + b.length, 0);
+  if (totalItems === 0) {
+    const eventsEl = hourRows[0]?.querySelector('.hour-events');
+    if (eventsEl) addScheduleItem(eventsEl, 'event', 'No reminders for this day.');
+    return;
+  }
+
+  for (let i = 0; i < hourRows.length; i++) {
+    const eventsEl = hourRows[i].querySelector('.hour-events');
+    if (!eventsEl) continue;
+    const items = buckets[i].sort((a, b) => a.sort - b.sort);
+    items.forEach((it) => addScheduleItem(eventsEl, it.type, it.text));
+  }
+}
+
 function startOfWeekMonday(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -348,7 +627,9 @@ function renderDashboardSelectedDayChip() {
 function setDashboardSelectedDate(iso) {
   if (!iso) return;
   dashboardSelectedIso = iso;
+  renderDashboardCalendar?.();
   renderDashboardWeekCalendar();
+  renderDashboardDaySchedule();
 }
 
 function scheduleDashboardCalendarRefresh() {
@@ -360,7 +641,9 @@ function scheduleDashboardCalendarRefresh() {
     const prevToday = toIsoDate(new Date(Date.now() - 1000));
     const newToday = toIsoDate(new Date());
     if (dashboardSelectedIso === prevToday) dashboardSelectedIso = newToday;
+    renderDashboardCalendar?.();
     renderDashboardWeekCalendar();
+    renderDashboardDaySchedule();
     scheduleDashboardCalendarRefresh();
   }, ms);
 }
@@ -442,7 +725,9 @@ function renderDashboardCalendar() {
 function initDashboardCalendar() {
   if (!document.querySelector('.calendar-week')) return;
 
+  renderDashboardCalendar?.();
   renderDashboardWeekCalendar();
+  renderDashboardDaySchedule();
   scheduleDashboardCalendarRefresh();
 
   document.querySelector('.calendar-week')?.addEventListener('click', (e) => {
@@ -466,6 +751,7 @@ function initDashboardCalendar() {
     viewSel.addEventListener('change', () => {
       dashboardCalendarView = (viewSel.value || 'day').toLowerCase();
       renderDashboardCalendar();
+      renderDashboardDaySchedule();
     });
   }
 
@@ -477,9 +763,15 @@ function initDashboardCalendar() {
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) renderDashboardWeekCalendar();
+    if (!document.hidden) {
+      renderDashboardWeekCalendar();
+      renderDashboardDaySchedule();
+    }
   });
-  window.addEventListener('focus', renderDashboardWeekCalendar);
+  window.addEventListener('focus', () => {
+    renderDashboardWeekCalendar();
+    renderDashboardDaySchedule();
+  });
 }
 
 // ===== Initialize =====
