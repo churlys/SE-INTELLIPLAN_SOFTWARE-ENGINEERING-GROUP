@@ -93,7 +93,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="focus-card">
             <div class="focus-card-inner">
               <div class="focus-info">
-                <p class="muted"><span id="dueTodayCount">0</span> task due today.</p>
+                <p class="muted"><span id="dueTodayCount">0</span> Tasks due today.</p>
                 <h2 id="timeGreeting">GOOD AFTERNOON.</h2>
               </div>
               <div class="focus-timer">
@@ -156,7 +156,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="calendar-header">
             <span>Calendar</span>
             <div class="select-wrap">
-              <button class="pill" type="button" aria-label="Calendar view">Day <span class="pill-caret">▾</span></button>
+              <button class="pill" type="button" aria-label="Calendar view">This Week <span class="pill-caret">▾</span></button>
             </div>
           </div>
 
@@ -199,23 +199,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div aria-hidden="true"></div>
           </div>
 
-          <div class="calendar-hours">
-            <div class="hour-row">
-              <div class="hour">1 AM</div>
-            </div>
-            <div class="hour-row">
-              <div class="hour">2 AM</div>
-            </div>
-            <div class="hour-row">
-              <div class="hour">3 AM</div>
-            </div>
-            <div class="hour-row">
-              <div class="hour">4 AM</div>
-            </div>
-            <div class="hour-row">
-              <div class="hour">5 AM</div>
-            </div>
-          </div>
+          <div class="calendar-hours" id="dashDaySchedule" aria-label="Day schedule"></div>
         </aside>
       </div>
 

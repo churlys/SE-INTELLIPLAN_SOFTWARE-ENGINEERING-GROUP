@@ -308,6 +308,7 @@ body {
   gap: 6px;
   justify-items: center;
   cursor: pointer;
+  position: relative;
 }
 .wd-name { color: var(--muted); font-size: 12px; font-weight: 700; }
 .wd-num { font-size: 18px; font-weight: 800; color: var(--text); }
@@ -318,6 +319,21 @@ body {
 .weekday.active .wd-num {
   color: #fff;
 }
+
+.weekday .wd-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  right: 8px;
+  bottom: 8px;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px #fff;
+  display: none;
+}
+
+.weekday.has-items .wd-dot { display: block; }
+.weekday.active.has-items .wd-dot { background: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.35); }
 
 .calendar-dayline {
   display: grid;
@@ -348,7 +364,15 @@ body {
   background: var(--panel);
   font-weight: 800;
 }
-.calendar-hours { display: grid; gap: 10px; }
+.calendar-hours {
+  display: grid;
+  gap: 10px;
+  /* Keep mini-calendar height stable; scroll inside this area */
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 6px;
+}
 .hour-row {
   display: grid;
   grid-template-columns: 64px 1fr;
@@ -358,6 +382,27 @@ body {
   border-top: 1px solid var(--border);
 }
 .hour { color: var(--muted); font-size: 12px; }
+
+.hour-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hour-event {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.hour-event--task { border-left: 3px solid var(--primary); }
+.hour-event--class { border-left: 3px solid var(--text); }
+.hour-event--event { border-left: 3px solid var(--muted); }
+.hour-event--exam { border-left: 3px solid var(--danger); }
 
 /* Bottom row panels */
 .bottom-row {
