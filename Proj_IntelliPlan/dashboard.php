@@ -213,8 +213,13 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="panel-head">
               <a href="classes.php" class="panel-title">Classes</a>
               <div class="panel-filters">
-                <div class="select">Select Subject</div>
-                <div class="select">Current</div>
+                <select class="select" id="dashClassesSubject" aria-label="Select Subject">
+                  <option value="">Select Subject</option>
+                </select>
+                <select class="select" id="dashClassesView" aria-label="Select View">
+                  <option value="current" selected>Current</option>
+                  <option value="past">Past</option>
+                </select>
               </div>
             </div>
           <div class="panel-body" id="dashboardClassesList">Loading classes…</div>
@@ -241,11 +246,16 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="panel-head">
             <a href="exam.php" class="panel-title">Exams</a>
             <div class="panel-filters">
-              <div class="select">Select Subject</div>
-              <div class="select">Current</div>
+              <select class="select" id="dashExamsSubject" aria-label="Select Subject">
+                <option value="">Select Subject</option>
+              </select>
+              <select class="select" id="dashExamsView" aria-label="Select View">
+                <option value="current" selected>Current</option>
+                <option value="past">Past</option>
+              </select>
             </div>
           </div>
-          <div class="panel-body muted">No exams to display.</div>
+          <div class="panel-body" id="dashboardExamsList">Loading exams…</div>
         </div>
       </div>
     </section>

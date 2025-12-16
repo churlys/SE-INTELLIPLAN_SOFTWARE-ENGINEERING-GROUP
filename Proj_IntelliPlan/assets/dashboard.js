@@ -783,6 +783,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== Dashboard classes panel =====
   (async function initDashboardClasses(){
     const listEl = document.getElementById('dashboardClassesList');
+    const subjectEl = document.getElementById('dashClassesSubject');
+    const viewEl = document.getElementById('dashClassesView');
     if (!listEl) return;
 
     function escapeHtml(s){
@@ -805,13 +807,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchClasses(){
-      const data = await fetchJson('lib/api/classes.php?view=current');
+      // Fetch all once; the panel dropdowns do client-side filtering.
+      const data = await fetchJson('lib/api/classes.php?view=all');
       return Array.isArray(data) ? data : [];
     }
 
+    function buildSubjectOptions(classes){
+      if (!subjectEl) return;
+      const selected = (subjectEl.value || '').trim();
+      const subjects = Array.from(
+        new Set((classes || []).map(c => (c?.subject || '').trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+
+      subjectEl.innerHTML = '<option value="">Select Subject</option>' +
+        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+      if (selected && subjects.includes(selected)) {
+        subjectEl.value = selected;
+      }
+    }
+
+    function isArchived(c){
+      return String(c?.status || '').toLowerCase() === 'archived';
+    }
+
+    function filterForPanel(classes){
+      const subject = (subjectEl?.value || '').trim();
+      const view = (viewEl?.value || 'current').toLowerCase();
+
+      return (classes || []).filter(c => {
+        if (subject && (c?.subject || '') !== subject) return false;
+        if (view === 'past') return isArchived(c);
+        // current
+        return !isArchived(c);
+      });
+    }
+
     function render(classes){
-      const current = (classes || [])
-        .filter(c => String(c?.status || 'active').toLowerCase() !== 'archived')
+      const current = filterForPanel(classes)
         .sort((a, b) => {
           const as = a?.start_time || '';
           const bs = b?.start_time || '';
@@ -853,10 +886,141 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const classes = await fetchClasses();
+      buildSubjectOptions(classes);
       render(classes);
+
+      subjectEl?.addEventListener('change', () => render(classes));
+      viewEl?.addEventListener('change', () => render(classes));
     } catch (e) {
       listEl.classList.add('muted');
       listEl.textContent = 'Failed to load classes.';
+    }
+  })();
+
+  // ===== Dashboard exams panel =====
+  (async function initDashboardExams(){
+    const listEl = document.getElementById('dashboardExamsList');
+    const subjectEl = document.getElementById('dashExamsSubject');
+    const viewEl = document.getElementById('dashExamsView');
+    if (!listEl) return;
+
+    function escapeHtml(s){
+      return (s + '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function isoToday(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    async function fetchExams(){
+      const data = await fetchJson('lib/api/exams.php');
+      return Array.isArray(data) ? data : [];
+    }
+
+    function buildSubjectOptions(exams){
+      if (!subjectEl) return;
+      const selected = (subjectEl.value || '').trim();
+      const subjects = Array.from(
+        new Set((exams || []).map(x => (x?.subject || '').trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+
+      subjectEl.innerHTML = '<option value="">Select Subject</option>' +
+        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+      if (selected && subjects.includes(selected)) {
+        subjectEl.value = selected;
+      }
+    }
+
+    function filterForPanel(exams){
+      const today = isoToday();
+      const subject = (subjectEl?.value || '').trim();
+      const view = (viewEl?.value || 'current').toLowerCase();
+
+      return (exams || []).filter(x => {
+        if (subject && (x?.subject || '') !== subject) return false;
+        const d = String(x?.exam_date || '').trim();
+        if (!d) return view !== 'past';
+        if (view === 'past') return d < today;
+        return d >= today;
+      });
+    }
+
+    function formatTimeAmerican(timeStr){
+      if (!timeStr) return '';
+      const parts = String(timeStr).split(':');
+      const h = parseInt(parts[0] || '0', 10);
+      const m = parseInt(parts[1] || '0', 10);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayHour = (h % 12) || 12;
+      return `${displayHour}:${String(m).padStart(2,'0')} ${ampm}`;
+    }
+
+    function render(exams){
+      const filtered = filterForPanel(exams)
+        .sort((a, b) => {
+          const ad = String(a?.exam_date || '');
+          const bd = String(b?.exam_date || '');
+          if (ad && bd && ad !== bd) return ad.localeCompare(bd);
+          if (ad && !bd) return -1;
+          if (!ad && bd) return 1;
+
+          const at = String(a?.exam_time || '');
+          const bt = String(b?.exam_time || '');
+          if (at && bt && at !== bt) return at.localeCompare(bt);
+          if (at && !bt) return -1;
+          if (!at && bt) return 1;
+
+          return (b?.id || 0) - (a?.id || 0);
+        })
+        .slice(0, 5);
+
+      if (filtered.length === 0) {
+        listEl.classList.add('muted');
+        listEl.textContent = 'No exams to display.';
+        return;
+      }
+
+      listEl.classList.remove('muted');
+      listEl.innerHTML = '';
+      filtered.forEach(x => {
+        const row = document.createElement('div');
+        row.className = 'dash-task-item';
+
+        const title = String(x?.title || 'Untitled');
+        const meta = [];
+        if (x?.subject) meta.push(String(x.subject));
+        if (x?.exam_date) meta.push(String(x.exam_date));
+        if (x?.exam_time) meta.push(formatTimeAmerican(String(x.exam_time)));
+        if (x?.location) meta.push(String(x.location));
+
+        row.innerHTML = `
+          <div class="dash-task-title">${escapeHtml(title)}</div>
+          ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    try {
+      const exams = await fetchExams();
+      buildSubjectOptions(exams);
+      render(exams);
+
+      subjectEl?.addEventListener('change', () => render(exams));
+      viewEl?.addEventListener('change', () => render(exams));
+    } catch (e) {
+      listEl.classList.add('muted');
+      listEl.textContent = 'Failed to load exams.';
     }
   })();
 
