@@ -159,8 +159,20 @@ body {
 }
 .focus-info h2 {
   margin: 8px 0 0;
-  font-size: 26px;
+  font-size: clamp(34px, 3.2vw, 54px);
   letter-spacing: 0.5px;
+}
+
+.focus-info .muted {
+  font-size: clamp(22px, 1.6vw, 30px);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.focus-info #dueTodayCount {
+  font-weight: 800;
+  font-size: 1.35em;
+  color: var(--primary);
 }
 .muted { color: var(--muted); }
 
