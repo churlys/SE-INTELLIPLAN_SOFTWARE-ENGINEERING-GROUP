@@ -156,7 +156,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="calendar-header">
             <span>Calendar</span>
             <div class="select-wrap">
-              <button class="pill" type="button" aria-label="Calendar view">This Week <span class="pill-caret">▾</span></button>
+              <button class="pill" type="button" aria-label="Calendar view">Day <span class="pill-caret">▾</span></button>
             </div>
           </div>
 
@@ -189,6 +189,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
               <div class="wd-name">Sun</div>
               <div class="wd-num">7</div>
             </button>
+          </div>
+
+          <div class="calendar-month" id="dashCalendarMonth" hidden>
+            <!-- Month grid rendered via JS -->
           </div>
 
           <div class="calendar-dayline" aria-label="Selected day">
