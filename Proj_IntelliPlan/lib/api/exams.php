@@ -31,6 +31,7 @@ function ensure_exams_schema(PDO $pdo): void {
     "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
     "  user_id INT UNSIGNED NOT NULL,\n" .
     "  title VARCHAR(255) NOT NULL,\n" .
+    "  subject VARCHAR(100) NULL,\n" .
     "  exam_date DATE NOT NULL,\n" .
     "  exam_time TIME NULL,\n" .
     "  location VARCHAR(255) NULL,\n" .
@@ -50,6 +51,7 @@ function ensure_exams_schema(PDO $pdo): void {
     }
     $alter = [];
     if (!isset($existing['title'])) $alter[] = "ADD COLUMN title VARCHAR(255) NOT NULL";
+    if (!isset($existing['subject'])) $alter[] = "ADD COLUMN subject VARCHAR(100) NULL";
     if (!isset($existing['exam_date'])) $alter[] = "ADD COLUMN exam_date DATE NOT NULL";
     if (!isset($existing['exam_time'])) $alter[] = "ADD COLUMN exam_time TIME NULL";
     if (!isset($existing['location'])) $alter[] = "ADD COLUMN location VARCHAR(255) NULL";
@@ -88,7 +90,7 @@ try {
       $params[] = $end;
     }
 
-    $sql = 'SELECT id, title, exam_date, exam_time, location, notes, status FROM exams WHERE ' . implode(' AND ', $where) . ' ORDER BY exam_date ASC, exam_time ASC, id DESC';
+    $sql = 'SELECT id, title, subject, exam_date, exam_time, location, notes, status FROM exams WHERE ' . implode(' AND ', $where) . ' ORDER BY exam_date ASC, exam_time ASC, id DESC';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -98,6 +100,7 @@ try {
 
   if ($method === 'POST') {
     $title = trim((string)($input['title'] ?? ''));
+    $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
     $exam_date = trim((string)($input['exam_date'] ?? ''));
     $exam_time = isset($input['exam_time']) ? trim((string)$input['exam_time']) : null;
     $location = isset($input['location']) ? trim((string)$input['location']) : null;
@@ -109,11 +112,19 @@ try {
       exit;
     }
 
-    $stmt = $pdo->prepare('INSERT INTO exams (user_id, title, exam_date, exam_time, location, notes) VALUES (?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$user['id'], $title, $exam_date, ($exam_time !== '' ? $exam_time : null), ($location !== '' ? $location : null), ($notes !== '' ? $notes : null)]);
+    $stmt = $pdo->prepare('INSERT INTO exams (user_id, title, subject, exam_date, exam_time, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([
+      $user['id'],
+      $title,
+      ($subject !== '' ? $subject : null),
+      $exam_date,
+      ($exam_time !== '' ? $exam_time : null),
+      ($location !== '' ? $location : null),
+      ($notes !== '' ? $notes : null)
+    ]);
     $id = (int)$pdo->lastInsertId();
 
-    $stmt = $pdo->prepare('SELECT id, title, exam_date, exam_time, location, notes, status FROM exams WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, title, subject, exam_date, exam_time, location, notes, status FROM exams WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     echo json_encode($stmt->fetch(PDO::FETCH_ASSOC));
     exit;
@@ -128,6 +139,7 @@ try {
     if (!$stmt->fetch()) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
 
     $title = trim((string)($input['title'] ?? ''));
+    $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
     $exam_date = trim((string)($input['exam_date'] ?? ''));
     $exam_time = isset($input['exam_time']) ? trim((string)$input['exam_time']) : null;
     $location = isset($input['location']) ? trim((string)$input['location']) : null;
@@ -140,10 +152,20 @@ try {
       exit;
     }
 
-    $stmt = $pdo->prepare('UPDATE exams SET title = ?, exam_date = ?, exam_time = ?, location = ?, notes = ?, status = ? WHERE id = ? AND user_id = ?');
-    $stmt->execute([$title, $exam_date, ($exam_time !== '' ? $exam_time : null), ($location !== '' ? $location : null), ($notes !== '' ? $notes : null), ($status !== '' ? $status : 'scheduled'), $id, $user['id']]);
+    $stmt = $pdo->prepare('UPDATE exams SET title = ?, subject = ?, exam_date = ?, exam_time = ?, location = ?, notes = ?, status = ? WHERE id = ? AND user_id = ?');
+    $stmt->execute([
+      $title,
+      ($subject !== '' ? $subject : null),
+      $exam_date,
+      ($exam_time !== '' ? $exam_time : null),
+      ($location !== '' ? $location : null),
+      ($notes !== '' ? $notes : null),
+      ($status !== '' ? $status : 'scheduled'),
+      $id,
+      $user['id']
+    ]);
 
-    $stmt = $pdo->prepare('SELECT id, title, exam_date, exam_time, location, notes, status FROM exams WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, title, subject, exam_date, exam_time, location, notes, status FROM exams WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     echo json_encode($stmt->fetch(PDO::FETCH_ASSOC));
     exit;
