@@ -36,6 +36,7 @@ function ensure_tasks_schema(PDO $pdo): void {
     "  due_date DATE NULL,\n" .
     "  due_time TIME NULL,\n" .
     "  status VARCHAR(20) NOT NULL DEFAULT 'open',\n" .
+    "  completed_at DATETIME NULL,\n" .
     "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
     "  PRIMARY KEY (id),\n" .
     "  KEY idx_tasks_user (user_id),\n" .
@@ -56,6 +57,7 @@ function ensure_tasks_schema(PDO $pdo): void {
     if (!isset($existing['due_date'])) $alter[] = "ADD COLUMN due_date DATE NULL";
     if (!isset($existing['due_time'])) $alter[] = "ADD COLUMN due_time TIME NULL";
     if (!isset($existing['status'])) $alter[] = "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'open'";
+    if (!isset($existing['completed_at'])) $alter[] = "ADD COLUMN completed_at DATETIME NULL";
     if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP";
     if ($alter) {
       $pdo->exec('ALTER TABLE tasks ' . implode(', ', $alter));
@@ -66,6 +68,22 @@ function ensure_tasks_schema(PDO $pdo): void {
 }
 
 ensure_tasks_schema($pdo);
+
+// Auto-delete completed tasks after 24 hours.
+function cleanup_completed_tasks(PDO $pdo, int $userId): void {
+  try {
+    // Backfill missing completed_at for existing done tasks so they get a 24h grace window.
+    $stmt = $pdo->prepare("UPDATE tasks SET completed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'done' AND completed_at IS NULL");
+    $stmt->execute([$userId]);
+
+    $stmt = $pdo->prepare("DELETE FROM tasks WHERE user_id = ? AND status = 'done' AND completed_at < (NOW() - INTERVAL 1 DAY)");
+    $stmt->execute([$userId]);
+  } catch (Throwable $e) {
+    // Best-effort; don't break API calls if cleanup fails.
+  }
+}
+
+cleanup_completed_tasks($pdo, (int)$user['id']);
 
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST ?? [];
@@ -127,9 +145,10 @@ try {
     if (!$id) { http_response_code(400); echo json_encode(['error' => 'Missing id']); exit; }
 
     // verify ownership
-    $stmt = $pdo->prepare('SELECT id FROM tasks WHERE id = ? AND user_id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, status FROM tasks WHERE id = ? AND user_id = ? LIMIT 1');
     $stmt->execute([$id, $user['id']]);
-    if (!$stmt->fetch()) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
 
     $title = trim($input['title'] ?? '');
     $details = $input['details'] ?? null;
@@ -138,7 +157,16 @@ try {
     $dueTime = $input['due_time'] ?? null;
     $status = $input['status'] ?? 'open';
 
-    $stmt = $pdo->prepare('UPDATE tasks SET title = ?, details = ?, subject = ?, due_date = ?, due_time = ?, status = ? WHERE id = ? AND user_id = ?');
+    $prevStatus = strtolower((string)($existing['status'] ?? 'open'));
+    $nextStatus = strtolower((string)$status);
+    $setCompletionSql = '';
+    if ($nextStatus === 'done' && $prevStatus !== 'done') {
+      $setCompletionSql = ', completed_at = CURRENT_TIMESTAMP';
+    } elseif ($nextStatus !== 'done' && $prevStatus === 'done') {
+      $setCompletionSql = ', completed_at = NULL';
+    }
+
+    $stmt = $pdo->prepare('UPDATE tasks SET title = ?, details = ?, subject = ?, due_date = ?, due_time = ?, status = ?' . $setCompletionSql . ' WHERE id = ? AND user_id = ?');
     $stmt->execute([$title, $details, $subject, $due, $dueTime, $status, $id, $user['id']]);
 
     $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE id = ? LIMIT 1');

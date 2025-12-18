@@ -82,6 +82,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <label class="tasks-select" aria-label="Select Subject">
               <select id="subjectFilter">
                 <option value="">Select Subject</option>
+                <option value="Math">Math</option>
+                <option value="English">English</option>
+                <option value="Science">Science</option>
+                <option value="PE">PE</option>
               </select>
               <span class="tasks-select-arrow" aria-hidden="true">▾</span>
             </label>
@@ -177,7 +181,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       const today = isoToday();
 
       return allTasks.filter(t => {
-        if (subject && (t.subject || '') !== subject) return false;
+        if (subject && String(t.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
 
         const status = (t.status || 'open').toLowerCase();
         const due = t.due_date || '';
@@ -195,16 +199,42 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
     function upsertSubjectOptions(tasks){
       if (!subjectFilterEl) return;
-      const subjects = Array.from(new Set(tasks.map(t => (t.subject || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+      const builtinSubjects = ['Math', 'English', 'Science', 'PE'];
+      const byKey = new Map();
+      builtinSubjects.forEach(s => byKey.set(s.toLowerCase(), s));
+      (tasks || []).forEach(t => {
+        const trimmed = String(t?.subject || '').trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, trimmed);
+      });
+
+      const builtinKeys = new Set(builtinSubjects.map(s => s.toLowerCase()));
+      const builtins = builtinSubjects.map(s => byKey.get(s.toLowerCase()) || s);
+      const custom = Array.from(byKey.entries())
+        .filter(([key]) => !builtinKeys.has(key))
+        .map(([, value]) => value)
+        .sort((a, b) => a.localeCompare(b));
+
+      const subjects = [...builtins, ...custom];
       const current = subjectFilterEl.value;
-      subjectFilterEl.innerHTML = '<option value="">Select Subject</option>' + subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-      if (subjects.includes(current)) subjectFilterEl.value = current;
+      subjectFilterEl.innerHTML = '<option value="">Select Subject</option>' +
+        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      if (current && subjects.some(s => s.toLowerCase() === current.toLowerCase())) {
+        subjectFilterEl.value = subjects.find(s => s.toLowerCase() === current.toLowerCase());
+      }
     }
 
     function render(){
       const tasks = filteredTasks();
       const thisMonthCount = tasks.filter(t => isThisMonth(t.due_date)).length;
-      tasksSectionLabelEl.textContent = `This month (${thisMonthCount})`;
+      if (currentView === 'past') {
+        tasksSectionLabelEl.textContent = `Completed (${tasks.length}) — Auto-deletes after 24 hours`;
+      } else if (currentView === 'overdue') {
+        tasksSectionLabelEl.textContent = `Overdue (${tasks.length})`;
+      } else {
+        tasksSectionLabelEl.textContent = `This month (${thisMonthCount})`;
+      }
 
       if (!tasksListEl) return;
       tasksListEl.innerHTML = '';
@@ -265,12 +295,12 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         left.appendChild(check);
         left.appendChild(main);
 
-        // Right-side controls (delete for overdue)
+        // Right-side controls (delete for overdue + completed)
         const right = document.createElement('div');
         right.className = 'task-right';
 
-        const isOverdue = (currentView === 'overdue');
-        if (isOverdue) {
+        const showDelete = (currentView === 'overdue' || currentView === 'past');
+        if (showDelete) {
           const del = document.createElement('button');
           del.type = 'button';
           del.className = 'task-delete';
@@ -278,7 +308,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           del.title = 'Delete task';
           del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
           del.addEventListener('click', async () => {
-            if (!confirm('Delete this overdue task? This cannot be undone.')) return;
+            const msg = currentView === 'overdue'
+              ? 'Delete this overdue task? This cannot be undone.'
+              : 'Delete this completed task? This cannot be undone.';
+            if (!confirm(msg)) return;
             try {
               await deleteTask(t.id);
               await refreshTasks();

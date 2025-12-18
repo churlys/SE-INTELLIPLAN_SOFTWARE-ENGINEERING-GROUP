@@ -815,15 +815,28 @@ document.addEventListener("DOMContentLoaded", () => {
     function buildSubjectOptions(classes){
       if (!subjectEl) return;
       const selected = (subjectEl.value || '').trim();
-      const subjects = Array.from(
-        new Set((classes || []).map(c => (c?.subject || '').trim()).filter(Boolean))
-      ).sort((a, b) => a.localeCompare(b));
+      const builtinSubjects = ['Math', 'English', 'Science', 'PE'];
+      const byKey = new Map();
+      builtinSubjects.forEach(s => byKey.set(s.toLowerCase(), s));
+      (classes || []).forEach(c => {
+        const trimmed = String(c?.subject || '').trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, trimmed);
+      });
+      const builtinKeys = new Set(builtinSubjects.map(s => s.toLowerCase()));
+      const builtins = builtinSubjects.map(s => byKey.get(s.toLowerCase()) || s);
+      const custom = Array.from(byKey.entries())
+        .filter(([key]) => !builtinKeys.has(key))
+        .map(([, value]) => value)
+        .sort((a, b) => a.localeCompare(b));
+      const subjects = [...builtins, ...custom];
 
       subjectEl.innerHTML = '<option value="">Select Subject</option>' +
         subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
 
-      if (selected && subjects.includes(selected)) {
-        subjectEl.value = selected;
+      if (selected && subjects.some(s => s.toLowerCase() === selected.toLowerCase())) {
+        subjectEl.value = subjects.find(s => s.toLowerCase() === selected.toLowerCase());
       }
     }
 
@@ -836,7 +849,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const view = (viewEl?.value || 'current').toLowerCase();
 
       return (classes || []).filter(c => {
-        if (subject && (c?.subject || '') !== subject) return false;
+        if (subject && String(c?.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
         if (view === 'past') return isArchived(c);
         // current
         return !isArchived(c);
@@ -929,15 +942,28 @@ document.addEventListener("DOMContentLoaded", () => {
     function buildSubjectOptions(exams){
       if (!subjectEl) return;
       const selected = (subjectEl.value || '').trim();
-      const subjects = Array.from(
-        new Set((exams || []).map(x => (x?.subject || '').trim()).filter(Boolean))
-      ).sort((a, b) => a.localeCompare(b));
+      const builtinSubjects = ['Math', 'English', 'Science', 'PE'];
+      const byKey = new Map();
+      builtinSubjects.forEach(s => byKey.set(s.toLowerCase(), s));
+      (exams || []).forEach(x => {
+        const trimmed = String(x?.subject || '').trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, trimmed);
+      });
+      const builtinKeys = new Set(builtinSubjects.map(s => s.toLowerCase()));
+      const builtins = builtinSubjects.map(s => byKey.get(s.toLowerCase()) || s);
+      const custom = Array.from(byKey.entries())
+        .filter(([key]) => !builtinKeys.has(key))
+        .map(([, value]) => value)
+        .sort((a, b) => a.localeCompare(b));
+      const subjects = [...builtins, ...custom];
 
       subjectEl.innerHTML = '<option value="">Select Subject</option>' +
         subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
 
-      if (selected && subjects.includes(selected)) {
-        subjectEl.value = selected;
+      if (selected && subjects.some(s => s.toLowerCase() === selected.toLowerCase())) {
+        subjectEl.value = subjects.find(s => s.toLowerCase() === selected.toLowerCase());
       }
     }
 
@@ -947,7 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const view = (viewEl?.value || 'current').toLowerCase();
 
       return (exams || []).filter(x => {
-        if (subject && (x?.subject || '') !== subject) return false;
+        if (subject && String(x?.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
         const d = String(x?.exam_date || '').trim();
         if (!d) return view !== 'past';
         if (view === 'past') return d < today;
@@ -1077,14 +1103,28 @@ document.addEventListener("DOMContentLoaded", () => {
     function buildSubjectOptions(tasks){
       if (!dashTasksSubjectEl) return;
       const selected = dashTasksSubjectEl.value;
-      const subjects = Array.from(new Set(tasks.map(t => (t?.subject || '').trim()).filter(Boolean)))
+      const builtinSubjects = ['Math', 'English', 'Science', 'PE'];
+      const byKey = new Map();
+      builtinSubjects.forEach(s => byKey.set(s.toLowerCase(), s));
+      (tasks || []).forEach(t => {
+        const trimmed = String(t?.subject || '').trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, trimmed);
+      });
+      const builtinKeys = new Set(builtinSubjects.map(s => s.toLowerCase()));
+      const builtins = builtinSubjects.map(s => byKey.get(s.toLowerCase()) || s);
+      const custom = Array.from(byKey.entries())
+        .filter(([key]) => !builtinKeys.has(key))
+        .map(([, value]) => value)
         .sort((a, b) => a.localeCompare(b));
+      const subjects = [...builtins, ...custom];
 
       dashTasksSubjectEl.innerHTML = '<option value="">Select Subject</option>' +
         subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
 
-      if (selected && subjects.includes(selected)) {
-        dashTasksSubjectEl.value = selected;
+      if (selected && subjects.some(s => s.toLowerCase() === String(selected).toLowerCase())) {
+        dashTasksSubjectEl.value = subjects.find(s => s.toLowerCase() === String(selected).toLowerCase());
       }
     }
 
@@ -1094,7 +1134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const view = (dashTasksViewEl?.value || 'current').toLowerCase();
 
       return tasks.filter(t => {
-        if (subject && (t?.subject || '') !== subject) return false;
+        if (subject && String(t?.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
 
         if (view === 'past') return isDone(t);
         if (view === 'overdue') return isOverdue(t, today);

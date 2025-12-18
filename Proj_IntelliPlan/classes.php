@@ -84,6 +84,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <label class="tasks-select" aria-label="Select Subject">
             <select id="subjectFilter">
               <option value="">Select Subject</option>
+              <option value="Math">Math</option>
+              <option value="English">English</option>
+              <option value="Science">Science</option>
+              <option value="PE">PE</option>
             </select>
             <span class="tasks-select-arrow" aria-hidden="true">▾</span>
           </label>
@@ -215,7 +219,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     function filteredClasses(){
       const subject = (subjectFilterEl?.value || '').trim();
       return allClasses.filter(c => {
-        if (subject && (c.subject || '') !== subject) return false;
+        if (subject && String(c.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
         const status = (c.status || 'active').toLowerCase();
         if (currentView === 'past') {
           return status === 'archived';
@@ -227,10 +231,30 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
     function upsertSubjectOptions(classes){
       if (!subjectFilterEl) return;
-      const subjects = Array.from(new Set(classes.map(c => (c.subject || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+      const builtinSubjects = ['Math', 'English', 'Science', 'PE'];
+      const byKey = new Map();
+      builtinSubjects.forEach(s => byKey.set(s.toLowerCase(), s));
+      (classes || []).forEach(c => {
+        const trimmed = String(c?.subject || '').trim();
+        if (!trimmed) return;
+        const key = trimmed.toLowerCase();
+        if (!byKey.has(key)) byKey.set(key, trimmed);
+      });
+
+      const builtinKeys = new Set(builtinSubjects.map(s => s.toLowerCase()));
+      const builtins = builtinSubjects.map(s => byKey.get(s.toLowerCase()) || s);
+      const custom = Array.from(byKey.entries())
+        .filter(([key]) => !builtinKeys.has(key))
+        .map(([, value]) => value)
+        .sort((a, b) => a.localeCompare(b));
+
+      const subjects = [...builtins, ...custom];
       const current = subjectFilterEl.value;
-      subjectFilterEl.innerHTML = '<option value="">Select Subject</option>' + subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-      if (subjects.includes(current)) subjectFilterEl.value = current;
+      subjectFilterEl.innerHTML = '<option value="">Select Subject</option>' +
+        subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      if (current && subjects.some(s => s.toLowerCase() === current.toLowerCase())) {
+        subjectFilterEl.value = subjects.find(s => s.toLowerCase() === current.toLowerCase());
+      }
     }
 
     function addSubjectToDropdown(subject){
