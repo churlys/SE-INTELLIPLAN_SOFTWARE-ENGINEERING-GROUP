@@ -81,6 +81,7 @@ body {
   color: white;
 }
 .nav-icon { width: 28px; height: 28px; display: grid; place-items: center; }
+.nav-icon img { width: 20px; height: 20px; display: block; object-fit: contain; }
 .nav-label { font-weight: 600; }
 .nav-separator { height: 1px; background: var(--border); margin: 8px 0; }
 /*log out*/

@@ -49,7 +49,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         </div>
       </details>
       <div class="nav-separator"></div>
-      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
+      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon"><img src="assets/logOUT.png" alt="" aria-hidden="true"></span><span class="nav-label">Log Out</span></a>
     </nav>
   </aside>
 

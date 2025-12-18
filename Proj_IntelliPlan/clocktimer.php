@@ -51,7 +51,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         </div>
       </details>
       <div class="nav-separator"></div>
-      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon">🚪</span><span class="nav-label">Log Out</span></a>
+      <a class="nav-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit();"><span class="nav-icon"><img src="assets/logOUT.png" alt="" aria-hidden="true"></span><span class="nav-label">Log Out</span></a>
     </nav>
   </aside>
 
@@ -70,7 +70,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     <section class="content">
       <div class="ct-shell">
         <div class="ct-top">
-          <h2 class="ct-title">Pomodoro Setting</h2>
+          <h2 class="ct-title">Focus timer settings</h2>
         </div>
 
         <div class="ct-main">
@@ -95,6 +95,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div class="ct-field">
               <label class="ct-label" for="focusMinutes">Focus Time</label>
               <select class="ct-select" id="focusMinutes">
+
                 <option value="15">15 Minutes</option>
                 <option value="20">20 Minutes</option>
                 <option value="25">25 Minutes</option>
