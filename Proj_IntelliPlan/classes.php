@@ -101,7 +101,13 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div class="tasks-add-grid">
               <label class="tasks-field">
                 <span class="tasks-label">Subject</span>
-                <input id="className" type="text" placeholder="e.g. Math">
+                <input id="className" type="text" placeholder="e.g. Math" list="classSubjectList">
+                <datalist id="classSubjectList">
+                  <option value="Math"></option>
+                  <option value="English"></option>
+                  <option value="Science"></option>
+                  <option value="PE"></option>
+                </datalist>
               </label>
                 <label class="tasks-field">
                   <span class="tasks-label">Time</span>

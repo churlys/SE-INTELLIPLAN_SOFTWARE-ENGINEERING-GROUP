@@ -100,7 +100,13 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                 </label>
                 <label class="tasks-field">
                   <span class="tasks-label">Subject</span>
-                  <input id="taskSubject" type="text" placeholder="e.g. Math">
+                  <input id="taskSubject" type="text" placeholder="e.g. Math" list="taskSubjectList">
+                  <datalist id="taskSubjectList">
+                    <option value="Math"></option>
+                    <option value="English"></option>
+                    <option value="Science"></option>
+                    <option value="PE"></option>
+                  </datalist>
                 </label>
                 <label class="tasks-field">
                   <span class="tasks-label">Due Date</span>
