@@ -35,6 +35,7 @@ function ensure_tasks_schema(PDO $pdo): void {
     "  subject VARCHAR(100) NULL,\n" .
     "  due_date DATE NULL,\n" .
     "  due_time TIME NULL,\n" .
+    "  file_id INT UNSIGNED NULL,\n" .
     "  status VARCHAR(20) NOT NULL DEFAULT 'open',\n" .
     "  completed_at DATETIME NULL,\n" .
     "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
@@ -56,6 +57,7 @@ function ensure_tasks_schema(PDO $pdo): void {
     if (!isset($existing['subject'])) $alter[] = "ADD COLUMN subject VARCHAR(100) NULL";
     if (!isset($existing['due_date'])) $alter[] = "ADD COLUMN due_date DATE NULL";
     if (!isset($existing['due_time'])) $alter[] = "ADD COLUMN due_time TIME NULL";
+    if (!isset($existing['file_id'])) $alter[] = "ADD COLUMN file_id INT UNSIGNED NULL";
     if (!isset($existing['status'])) $alter[] = "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'open'";
     if (!isset($existing['completed_at'])) $alter[] = "ADD COLUMN completed_at DATETIME NULL";
     if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP";
@@ -67,7 +69,25 @@ function ensure_tasks_schema(PDO $pdo): void {
   }
 }
 
+// Create/upgrade files table for attachments (safe if already exists).
+function ensure_files_schema(PDO $pdo): void {
+  $pdo->exec(
+    "CREATE TABLE IF NOT EXISTS files (\n" .
+    "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+    "  user_id INT UNSIGNED NOT NULL,\n" .
+    "  original_name VARCHAR(255) NOT NULL,\n" .
+    "  stored_path VARCHAR(500) NOT NULL,\n" .
+    "  mime_type VARCHAR(120) NULL,\n" .
+    "  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,\n" .
+    "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
+    "  PRIMARY KEY (id),\n" .
+    "  KEY idx_files_user (user_id)\n" .
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+}
+
 ensure_tasks_schema($pdo);
+ensure_files_schema($pdo);
 
 // Auto-delete completed tasks after 24 hours.
 function cleanup_completed_tasks(PDO $pdo, int $userId): void {
@@ -113,10 +133,18 @@ try {
     }
 
     // Order without relying on created_at (older schemas may not have it).
-    $sql = 'SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE ' . implode(' AND ', $where) . ' ORDER BY due_date IS NULL, due_date ASC, due_time IS NULL, due_time ASC, id DESC';
+    $sql = 'SELECT t.id, t.title, t.details, t.subject, DATE(t.due_date) AS due_date, t.due_time, t.status, t.file_id, f.original_name AS file_name ' .
+      'FROM tasks t ' .
+      'LEFT JOIN files f ON f.id = t.file_id AND f.user_id = t.user_id ' .
+      'WHERE ' . implode(' AND ', $where) . ' ORDER BY t.due_date IS NULL, t.due_date ASC, t.due_time IS NULL, t.due_time ASC, t.id DESC';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($tasks as &$t) {
+      $fid = (int)($t['file_id'] ?? 0);
+      $t['file_id'] = $fid ?: null;
+      $t['file_url'] = $fid ? ('lib/file.php?id=' . $fid) : null;
+    }
     echo json_encode($tasks);
     exit;
   }
@@ -133,9 +161,12 @@ try {
     $stmt->execute([$user['id'], $title, $details, $subject, $due, $dueTime]);
     $id = (int)$pdo->lastInsertId();
 
-    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT t.id, t.title, t.details, t.subject, DATE(t.due_date) AS due_date, t.due_time, t.status, t.file_id, f.original_name AS file_name FROM tasks t LEFT JOIN files f ON f.id = t.file_id AND f.user_id = t.user_id WHERE t.id = ? LIMIT 1');
     $stmt->execute([$id]);
     $task = $stmt->fetch(PDO::FETCH_ASSOC);
+    $fid = (int)($task['file_id'] ?? 0);
+    $task['file_id'] = $fid ?: null;
+    $task['file_url'] = $fid ? ('lib/file.php?id=' . $fid) : null;
     echo json_encode($task);
     exit;
   }
@@ -169,9 +200,12 @@ try {
     $stmt = $pdo->prepare('UPDATE tasks SET title = ?, details = ?, subject = ?, due_date = ?, due_time = ?, status = ?' . $setCompletionSql . ' WHERE id = ? AND user_id = ?');
     $stmt->execute([$title, $details, $subject, $due, $dueTime, $status, $id, $user['id']]);
 
-    $stmt = $pdo->prepare('SELECT id, title, details, subject, DATE(due_date) AS due_date, due_time, status FROM tasks WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT t.id, t.title, t.details, t.subject, DATE(t.due_date) AS due_date, t.due_time, t.status, t.file_id, f.original_name AS file_name FROM tasks t LEFT JOIN files f ON f.id = t.file_id AND f.user_id = t.user_id WHERE t.id = ? LIMIT 1');
     $stmt->execute([$id]);
     $task = $stmt->fetch(PDO::FETCH_ASSOC);
+    $fid = (int)($task['file_id'] ?? 0);
+    $task['file_id'] = $fid ?: null;
+    $task['file_url'] = $fid ? ('lib/file.php?id=' . $fid) : null;
     echo json_encode($task);
     exit;
   }

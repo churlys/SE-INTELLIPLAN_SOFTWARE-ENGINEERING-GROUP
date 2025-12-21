@@ -1,6 +1,4 @@
--- schema_full.sql
--- Run: mysql -u root -p < schema_full.sql
--- This creates the database and all required tables (users, tasks, calendar_events)
+
 
 CREATE DATABASE IF NOT EXISTS student_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE student_prod;
@@ -18,12 +16,25 @@ CREATE TABLE IF NOT EXISTS tasks (
   user_id INT UNSIGNED NOT NULL,
   title VARCHAR(255) NOT NULL,
   details TEXT DEFAULT NULL,
+  file_id INT UNSIGNED DEFAULT NULL,
   due_date DATETIME DEFAULT NULL,
   due_time TIME DEFAULT NULL,
   completed_at DATETIME DEFAULT NULL,
   status ENUM('open','done','archived') DEFAULT 'open',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS files (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  stored_path VARCHAR(500) NOT NULL,
+  mime_type VARCHAR(120) DEFAULT NULL,
+  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX (user_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -69,6 +80,7 @@ CREATE TABLE IF NOT EXISTS exams (
   exam_time TIME DEFAULT NULL,
   location VARCHAR(255) DEFAULT NULL,
   notes TEXT DEFAULT NULL,
+  file_id INT UNSIGNED DEFAULT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX (user_id, exam_date),

@@ -34,11 +34,22 @@ function startLiveClock() {
 
 // ===== Shared Pomodoro State =====
 const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
+const INTELLIPLAN_LAST_USER_KEY = 'intelliplan:lastUserId';
 const POMODORO_SETTINGS = {
   focusMinutes: 'intelliplan:pomodoroFocusMinutes',
   breakMinutes: 'intelliplan:pomodoroShortBreakMinutes',
   alertSound: 'intelliplan:pomodoroAlertSound',
 };
+
+function resetPomodoroIfUserChanged() {
+  const userId = (document.body && document.body.dataset) ? (document.body.dataset.userId || '') : '';
+  if (!userId) return;
+  const last = localStorage.getItem(INTELLIPLAN_LAST_USER_KEY) || '';
+  if (last && last !== userId) {
+    localStorage.removeItem(POMODORO_STATE_KEY);
+  }
+  localStorage.setItem(INTELLIPLAN_LAST_USER_KEY, userId);
+}
 
 let pomodoroTicker = null;
 let audioCtx = null;
@@ -308,6 +319,7 @@ function saveSettingsFromForm() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  resetPomodoroIfUserChanged();
   startLiveClock();
   loadSettingsIntoForm();
   initPomodoro();

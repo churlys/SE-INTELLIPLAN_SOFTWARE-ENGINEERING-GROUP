@@ -35,7 +35,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       <div class="brand-name">IntelliPlan</div>
     </div>
     <nav class="nav">
-      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon"><img src="assets/icon-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item <?php echo ($currentPage === 'calendar.php') ? 'active' : ''; ?>" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
       <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
         <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
@@ -107,6 +107,11 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
               <label class="tasks-field tasks-field-full">
                 <span class="tasks-label">Notes</span>
                 <textarea id="examNotes" rows="3" placeholder="Optional notes"></textarea>
+              </label>
+
+              <label class="tasks-field tasks-field-full">
+                <span class="tasks-label">Exam File (optional)</span>
+                <input id="examFile" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
               </label>
             </div>
             <div class="tasks-add-actions">
@@ -231,6 +236,23 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           notes: (notesEl?.value || '').trim(),
         };
 
+        const fileInput = document.getElementById('examFile');
+        const selectedFile = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0] : null;
+
+        async function uploadExamFile(examId, file){
+          const fd = new FormData();
+          fd.append('exam_id', String(examId));
+          fd.append('file', file);
+          const res = await fetch('lib/api/exam_attachment.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: fd,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data?.error || ('Upload failed (' + res.status + ')'));
+          return data;
+        }
+
         try {
           const res = await fetch('lib/api/exams.php', {
             method: 'POST',
@@ -240,6 +262,10 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data?.error || ('Failed to save (' + res.status + ')'));
+
+          if (selectedFile && data && data.id) {
+            await uploadExamFile(data.id, selectedFile);
+          }
 
           form.reset();
           await refresh();

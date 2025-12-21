@@ -35,7 +35,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
   <link rel="stylesheet" href="assets/styles-dashboard.css" />
   
 </head>
-<body>
+<body data-user-id="<?php echo htmlspecialchars((string)($user['id'] ?? '')); ?>">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">
@@ -46,7 +46,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
     <nav class="nav">
       <a class="nav-item <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
-        <span class="nav-icon">🏠</span>
+        <span class="nav-icon"><img src="assets/icon-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         <span class="nav-label">Dashboard</span>
       </a>
       <a class="nav-item <?php echo ($currentPage == 'calendar.php') ? 'active' : ''; ?>" href="calendar.php">

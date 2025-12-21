@@ -47,8 +47,8 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     </div>
 
     <nav class="nav">
-      <a class="nav-item <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
-        <span class="nav-icon">🏠</span>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
+        <span class="nav-icon"><img src="assets/icon-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         <span class="nav-label">Dashboard</span>
       </a>
       <a class="nav-item <?php echo ($currentPage == 'calendar.php') ? 'active' : ''; ?>" href="calendar.php">

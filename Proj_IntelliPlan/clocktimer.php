@@ -28,7 +28,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
   <link rel="stylesheet" href="assets/styles-dashboard.css">
   <link rel="stylesheet" href="assets/styles-clocktimer.css">
 </head>
-<body>
+<body data-user-id="<?php echo htmlspecialchars((string)($user['id'] ?? '')); ?>">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo"><img src="assets/logo.jpg" alt="Logo" style="width:100%;height:100%;object-fit:contain;"></div>
@@ -36,7 +36,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     </div>
 
     <nav class="nav">
-      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon"><img src="assets/icon-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item <?php echo ($currentPage === 'calendar.php') ? 'active' : ''; ?>" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
       <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
         <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">

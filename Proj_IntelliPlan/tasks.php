@@ -34,7 +34,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       <div class="brand-name">IntelliPlan</div>
     </div>
     <nav class="nav">
-      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item <?php echo ($currentPage === 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php"><span class="nav-icon"><img src="assets/icon-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span><span class="nav-label">Dashboard</span></a>
       <a class="nav-item <?php echo ($currentPage === 'calendar.php') ? 'active' : ''; ?>" href="calendar.php"><span class="nav-icon">🗓️</span><span class="nav-label">Calendar</span></a>
       <details class="nav-activities" <?php echo $isActivitiesPage ? 'open' : ''; ?>>
         <summary class="nav-item <?php echo $isActivitiesPage ? 'active' : ''; ?>" aria-label="Activities menu">
@@ -119,6 +119,11 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
                 <label class="tasks-field tasks-field-full">
                   <span class="tasks-label">Details</span>
                   <textarea id="taskDetails" rows="3" placeholder="Optional details"></textarea>
+                </label>
+
+                <label class="tasks-field tasks-field-full">
+                  <span class="tasks-label">Exam File (optional)</span>
+                  <input id="taskFile" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
                 </label>
               </div>
               <div class="tasks-add-actions">
@@ -363,6 +368,22 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       return data;
     }
 
+    async function uploadTaskFile(taskId, file){
+      const fd = new FormData();
+      fd.append('task_id', String(taskId));
+      fd.append('file', file);
+
+      const res = await fetch('lib/api/task_attachment.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: fd,
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Upload failed ' + res.status));
+      return data;
+    }
+
     async function updateTask(payload){
       const res = await fetch('lib/api/tasks.php', {
         method: 'PUT',
@@ -422,6 +443,8 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       const due = document.getElementById('taskDue')?.value || null;
       const dueTime = document.getElementById('taskDueTime')?.value || null;
       const details = document.getElementById('taskDetails')?.value?.trim() || '';
+      const fileInput = document.getElementById('taskFile');
+      const selectedFile = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0] : null;
 
       if (!title) {
         addTaskError.textContent = 'Title is required.';
@@ -430,13 +453,17 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       }
 
       try {
-        await createTask({
+        const created = await createTask({
           title,
           subject: subject || null,
           due_date: due || null,
           due_time: dueTime || null,
           details: details || null,
         });
+
+        if (selectedFile && created && created.id) {
+          await uploadTaskFile(created.id, selectedFile);
+        }
         addTaskForm.reset();
         addTaskPanel.hidden = true;
         await refreshTasks();

@@ -41,11 +41,22 @@ function startLiveClock() {
 
 // ===== Pomodoro Timer (synced with clocktimer.php) =====
 const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
+const INTELLIPLAN_LAST_USER_KEY = 'intelliplan:lastUserId';
 const POMODORO_SETTINGS = {
   focusMinutes: 'intelliplan:pomodoroFocusMinutes',
   breakMinutes: 'intelliplan:pomodoroShortBreakMinutes',
   alertSound: 'intelliplan:pomodoroAlertSound',
 };
+
+function resetPomodoroIfUserChanged() {
+  const userId = (document.body && document.body.dataset) ? (document.body.dataset.userId || '') : '';
+  if (!userId) return;
+  const last = localStorage.getItem(INTELLIPLAN_LAST_USER_KEY) || '';
+  if (last && last !== userId) {
+    localStorage.removeItem(POMODORO_STATE_KEY);
+  }
+  localStorage.setItem(INTELLIPLAN_LAST_USER_KEY, userId);
+}
 
 let pomodoroTicker = null;
 let audioCtx = null;
@@ -776,6 +787,7 @@ function initDashboardCalendar() {
 
 // ===== Initialize =====
 document.addEventListener("DOMContentLoaded", () => {
+  resetPomodoroIfUserChanged();
   startLiveClock();
   initPomodoro();
   initDashboardCalendar();
@@ -1033,6 +1045,23 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="dash-task-title">${escapeHtml(title)}</div>
           ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
         `;
+
+        if (x && x.file_url) {
+          row.style.cursor = 'pointer';
+          row.setAttribute('role', 'button');
+          row.setAttribute('tabindex', '0');
+          row.setAttribute('title', 'Open attached file');
+          const openFile = () => {
+            window.open(String(x.file_url), '_blank', 'noopener');
+          };
+          row.addEventListener('click', openFile);
+          row.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openFile();
+            }
+          });
+        }
         listEl.appendChild(row);
       });
     }
@@ -1177,6 +1206,23 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="dash-task-title">${escapeHtml(t.title || 'Untitled')}</div>
           ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
         `;
+
+        if (t && t.file_url) {
+          row.style.cursor = 'pointer';
+          row.setAttribute('role', 'button');
+          row.setAttribute('tabindex', '0');
+          row.setAttribute('title', 'Open attached file');
+          const openFile = () => {
+            window.open(String(t.file_url), '_blank', 'noopener');
+          };
+          row.addEventListener('click', openFile);
+          row.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openFile();
+            }
+          });
+        }
         dashboardTasksListEl.appendChild(row);
       });
     }

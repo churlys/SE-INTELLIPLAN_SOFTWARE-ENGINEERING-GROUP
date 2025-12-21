@@ -1,5 +1,5 @@
 <?php
-// lib/auth.php - authentication helpers used by the app (register/login/session/CSRF)
+
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -13,7 +13,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/db.php';
 
-/* CSRF helpers */
 function csrf_token(): string {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(24));
@@ -41,7 +40,7 @@ function register_user(string $name, string $email, string $password): ?int {
         $stmt->execute([$name, $email, $pwHash]);
         return (int)$pdo->lastInsertId();
     } catch (PDOException $e) {
-        // duplicate email or other error -> return null
+ 
         return null;
     }
 }
