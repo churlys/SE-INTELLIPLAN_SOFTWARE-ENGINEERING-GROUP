@@ -33,13 +33,45 @@ function db(): PDO {
         PDO::ATTR_EMULATE_PREPARES => false,
     ];
 
+    $isApiRequest = function (): bool {
+        $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+        if ($uri !== '' && strpos($uri, '/lib/api/') !== false) return true;
+        $accept = (string)($_SERVER['HTTP_ACCEPT'] ?? '');
+        return stripos($accept, 'application/json') !== false;
+    };
+
+    $renderDbError = function (PDOException $e) use ($isApiRequest): void {
+        http_response_code(500);
+        $msg = 'Database connection failed: ' . $e->getMessage();
+        if ($isApiRequest()) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => 'Database connection failed',
+                'detail' => $e->getMessage(),
+            ]);
+        } else {
+            echo "Database connection failed: " . htmlspecialchars($e->getMessage());
+        }
+        exit;
+    };
+
     try {
         $pdo = new PDO(DB_DSN, DB_USER, DB_PASS, $options);
         return $pdo;
     } catch (PDOException $e) {
-        
-        http_response_code(500);
-        echo "Database connection failed: " . htmlspecialchars($e->getMessage());
-        exit;
+        // Common local setup: MySQL root has an empty password.
+        $isDefaultRootRoot = (defined('DB_USER') && DB_USER === 'root' && defined('DB_PASS') && DB_PASS === 'root');
+        if ($isDefaultRootRoot) {
+            try {
+                $pdo = new PDO(DB_DSN, DB_USER, '', $options);
+                return $pdo;
+            } catch (PDOException $e2) {
+                $renderDbError($e2);
+            }
+        }
+        $renderDbError($e);
     }
+
+    // Unreachable (all non-success paths exit), but keeps analyzers happy.
+    throw new RuntimeException('Database connection unavailable');
 }

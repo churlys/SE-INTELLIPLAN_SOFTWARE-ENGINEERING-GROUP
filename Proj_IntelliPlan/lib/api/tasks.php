@@ -20,31 +20,54 @@ if (file_exists(__DIR__ . '/../auth.php')) {
   exit;
 }
 
-require_auth();
+// API endpoints should return JSON errors (not HTML redirects).
+if (!function_exists('is_logged_in') || !function_exists('current_user')) {
+  http_response_code(500);
+  echo json_encode(['error' => 'Auth helpers missing.']);
+  exit;
+}
+if (!is_logged_in()) {
+  http_response_code(401);
+  echo json_encode(['error' => 'Not authenticated']);
+  exit;
+}
+
 $user = current_user();
+if (!$user || empty($user['id'])) {
+  http_response_code(401);
+  echo json_encode(['error' => 'Invalid session']);
+  exit;
+}
 $pdo = db();
 
 // Create/upgrade table for local/dev setups (safe if already exists).
 function ensure_tasks_schema(PDO $pdo): void {
-  $pdo->exec(
-    "CREATE TABLE IF NOT EXISTS tasks (\n" .
-    "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
-    "  user_id INT UNSIGNED NOT NULL,\n" .
-    "  title VARCHAR(255) NOT NULL,\n" .
-    "  details TEXT NULL,\n" .
-    "  subject VARCHAR(100) NULL,\n" .
-    "  due_date DATE NULL,\n" .
-    "  due_time TIME NULL,\n" .
-    "  file_id INT UNSIGNED NULL,\n" .
-    "  status VARCHAR(20) NOT NULL DEFAULT 'open',\n" .
-    "  completed_at DATETIME NULL,\n" .
-    "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
-    "  PRIMARY KEY (id),\n" .
-    "  KEY idx_tasks_user (user_id),\n" .
-    "  KEY idx_tasks_due (due_date),\n" .
-    "  KEY idx_tasks_due_time (due_time)\n" .
-    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-  );
+  // Prefer broadly compatible MySQL/MariaDB DDL.
+  // NOTE: Avoid DATETIME DEFAULT CURRENT_TIMESTAMP (not supported on some older MySQL setups).
+  try {
+    $pdo->exec(
+      "CREATE TABLE IF NOT EXISTS tasks (\n" .
+      "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+      "  user_id INT UNSIGNED NOT NULL,\n" .
+      "  title VARCHAR(255) NOT NULL,\n" .
+      "  details TEXT NULL,\n" .
+      "  subject VARCHAR(100) NULL,\n" .
+      "  due_date DATETIME NULL,\n" .
+      "  due_time TIME NULL,\n" .
+      "  file_id INT UNSIGNED NULL,\n" .
+      "  status VARCHAR(20) NOT NULL DEFAULT 'open',\n" .
+      "  completed_at DATETIME NULL,\n" .
+      "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
+      "  PRIMARY KEY (id),\n" .
+      "  KEY idx_tasks_user (user_id),\n" .
+      "  KEY idx_tasks_due (due_date),\n" .
+      "  KEY idx_tasks_due_time (due_time)\n" .
+      ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } catch (PDOException $e) {
+    // If the table already exists but the CREATE statement is incompatible with this DB version,
+    // continue; subsequent queries will still work against the existing table.
+  }
 
   // Best-effort column adds for older schemas.
   try {
@@ -55,12 +78,12 @@ function ensure_tasks_schema(PDO $pdo): void {
     $alter = [];
     if (!isset($existing['details'])) $alter[] = "ADD COLUMN details TEXT NULL";
     if (!isset($existing['subject'])) $alter[] = "ADD COLUMN subject VARCHAR(100) NULL";
-    if (!isset($existing['due_date'])) $alter[] = "ADD COLUMN due_date DATE NULL";
+    if (!isset($existing['due_date'])) $alter[] = "ADD COLUMN due_date DATETIME NULL";
     if (!isset($existing['due_time'])) $alter[] = "ADD COLUMN due_time TIME NULL";
     if (!isset($existing['file_id'])) $alter[] = "ADD COLUMN file_id INT UNSIGNED NULL";
     if (!isset($existing['status'])) $alter[] = "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'open'";
     if (!isset($existing['completed_at'])) $alter[] = "ADD COLUMN completed_at DATETIME NULL";
-    if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP";
+    if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP";
     if ($alter) {
       $pdo->exec('ALTER TABLE tasks ' . implode(', ', $alter));
     }
@@ -71,19 +94,23 @@ function ensure_tasks_schema(PDO $pdo): void {
 
 // Create/upgrade files table for attachments (safe if already exists).
 function ensure_files_schema(PDO $pdo): void {
-  $pdo->exec(
-    "CREATE TABLE IF NOT EXISTS files (\n" .
-    "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
-    "  user_id INT UNSIGNED NOT NULL,\n" .
-    "  original_name VARCHAR(255) NOT NULL,\n" .
-    "  stored_path VARCHAR(500) NOT NULL,\n" .
-    "  mime_type VARCHAR(120) NULL,\n" .
-    "  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,\n" .
-    "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
-    "  PRIMARY KEY (id),\n" .
-    "  KEY idx_files_user (user_id)\n" .
-    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-  );
+  try {
+    $pdo->exec(
+      "CREATE TABLE IF NOT EXISTS files (\n" .
+      "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+      "  user_id INT UNSIGNED NOT NULL,\n" .
+      "  original_name VARCHAR(255) NOT NULL,\n" .
+      "  stored_path VARCHAR(500) NOT NULL,\n" .
+      "  mime_type VARCHAR(120) NULL,\n" .
+      "  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,\n" .
+      "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
+      "  PRIMARY KEY (id),\n" .
+      "  KEY idx_files_user (user_id)\n" .
+      ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } catch (PDOException $e) {
+    // Best-effort; see note in ensure_tasks_schema.
+  }
 }
 
 ensure_tasks_schema($pdo);
@@ -108,28 +135,34 @@ cleanup_completed_tasks($pdo, (int)$user['id']);
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST ?? [];
 
+function null_if_empty($value): ?string {
+  if ($value === null) return null;
+  $s = trim((string)$value);
+  return $s === '' ? null : $s;
+}
+
 try {
   if ($method === 'GET') {
     // Optional filters: view=current|overdue|past|all and subject
     $view = strtolower(trim((string)($_GET['view'] ?? 'all')));
     $subject = trim((string)($_GET['subject'] ?? ''));
 
-    $where = ['user_id = ?'];
+    $where = ['t.user_id = ?'];
     $params = [$user['id']];
 
     if ($subject !== '') {
-      $where[] = 'subject = ?';
+      $where[] = 't.subject = ?';
       $params[] = $subject;
     }
 
     if ($view === 'past') {
-      $where[] = "status = 'done'";
+      $where[] = "t.status = 'done'";
     } elseif ($view === 'overdue') {
-      $where[] = "status <> 'done'";
-      $where[] = 'due_date IS NOT NULL AND DATE(due_date) < CURDATE()';
+      $where[] = "t.status <> 'done'";
+      $where[] = 't.due_date IS NOT NULL AND DATE(t.due_date) < CURDATE()';
     } elseif ($view === 'current') {
-      $where[] = "status <> 'done'";
-      $where[] = '(due_date IS NULL OR DATE(due_date) >= CURDATE())';
+      $where[] = "t.status <> 'done'";
+      $where[] = '(t.due_date IS NULL OR DATE(t.due_date) >= CURDATE())';
     }
 
     // Order without relying on created_at (older schemas may not have it).
@@ -150,11 +183,11 @@ try {
   }
 
   if ($method === 'POST') {
-    $title = trim($input['title'] ?? '');
-    $details = $input['details'] ?? null;
-    $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
-    $due = $input['due_date'] ?? null;
-    $dueTime = $input['due_time'] ?? null;
+    $title = trim((string)($input['title'] ?? ''));
+    $details = null_if_empty($input['details'] ?? null);
+    $subject = null_if_empty($input['subject'] ?? null);
+    $due = null_if_empty($input['due_date'] ?? null);
+    $dueTime = null_if_empty($input['due_time'] ?? null);
     if ($title === '') { http_response_code(400); echo json_encode(['error' => 'Missing title']); exit; }
 
     $stmt = $pdo->prepare('INSERT INTO tasks (user_id, title, details, subject, due_date, due_time) VALUES (?, ?, ?, ?, ?, ?)');
@@ -181,12 +214,12 @@ try {
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$existing) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
 
-    $title = trim($input['title'] ?? '');
-    $details = $input['details'] ?? null;
-    $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
-    $due = $input['due_date'] ?? null;
-    $dueTime = $input['due_time'] ?? null;
-    $status = $input['status'] ?? 'open';
+    $title = trim((string)($input['title'] ?? ''));
+    $details = null_if_empty($input['details'] ?? null);
+    $subject = null_if_empty($input['subject'] ?? null);
+    $due = null_if_empty($input['due_date'] ?? null);
+    $dueTime = null_if_empty($input['due_time'] ?? null);
+    $status = (string)($input['status'] ?? 'open');
 
     $prevStatus = strtolower((string)($existing['status'] ?? 'open'));
     $nextStatus = strtolower((string)$status);

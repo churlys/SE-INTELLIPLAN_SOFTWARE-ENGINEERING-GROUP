@@ -170,7 +170,19 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
 
       async function fetchExams(){
         const res = await fetch('lib/api/exams.php', { credentials: 'same-origin' });
-        if (!res.ok) throw new Error('Network error ' + res.status);
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '');
+          let msg = 'Request failed (' + res.status + ')';
+          if (bodyText) {
+            try {
+              const j = JSON.parse(bodyText);
+              msg = j?.error || j?.detail || msg;
+            } catch {
+              msg = bodyText;
+            }
+          }
+          throw new Error(msg);
+        }
         const data = await res.json();
         return Array.isArray(data) ? data : [];
       }

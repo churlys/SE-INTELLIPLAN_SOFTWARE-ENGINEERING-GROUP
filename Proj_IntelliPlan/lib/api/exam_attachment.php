@@ -18,11 +18,22 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../auth.php';
 
-require_auth();
+// API endpoints should return JSON errors (not HTML redirects).
+if (!function_exists('is_logged_in') || !function_exists('current_user')) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Auth helpers missing.']);
+    exit;
+}
+if (!is_logged_in()) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Not authenticated']);
+    exit;
+}
+
 $user = current_user();
 if (!$user || !isset($user['id'])) {
     http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
+    echo json_encode(['error' => 'Invalid session']);
     exit;
 }
 
@@ -48,19 +59,23 @@ if (!isset($_FILES['file'])) {
 $pdo = db();
 
 function ensure_files_schema(PDO $pdo): void {
-    $pdo->exec(
-        "CREATE TABLE IF NOT EXISTS files (\n" .
-        "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
-        "  user_id INT UNSIGNED NOT NULL,\n" .
-        "  original_name VARCHAR(255) NOT NULL,\n" .
-        "  stored_path VARCHAR(500) NOT NULL,\n" .
-        "  mime_type VARCHAR(120) NULL,\n" .
-        "  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,\n" .
-        "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
-        "  PRIMARY KEY (id),\n" .
-        "  KEY idx_files_user (user_id)\n" .
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-    );
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS files (\n" .
+            "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+            "  user_id INT UNSIGNED NOT NULL,\n" .
+            "  original_name VARCHAR(255) NOT NULL,\n" .
+            "  stored_path VARCHAR(500) NOT NULL,\n" .
+            "  mime_type VARCHAR(120) NULL,\n" .
+            "  size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,\n" .
+            "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
+            "  PRIMARY KEY (id),\n" .
+            "  KEY idx_files_user (user_id)\n" .
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+    } catch (PDOException $e) {
+        // Best-effort.
+    }
 }
 
 function ensure_exams_file_column(PDO $pdo): void {

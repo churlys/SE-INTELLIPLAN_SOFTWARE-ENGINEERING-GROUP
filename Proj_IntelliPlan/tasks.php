@@ -342,7 +342,19 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     async function refreshTasks(){
       try {
         const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
-        if (!res.ok) throw new Error('Network error ' + res.status);
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '');
+          let msg = 'Request failed (' + res.status + ')';
+          if (bodyText) {
+            try {
+              const j = JSON.parse(bodyText);
+              msg = j?.error || j?.detail || msg;
+            } catch {
+              msg = bodyText;
+            }
+          }
+          throw new Error(msg);
+        }
         const tasks = await res.json();
         allTasks = Array.isArray(tasks) ? tasks : [];
         upsertSubjectOptions(allTasks);
@@ -351,7 +363,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         tasksListEl.innerHTML = '';
         const err = document.createElement('div');
         err.className = 'tasks-empty';
-        err.textContent = 'Failed to load tasks: ' + e.message;
+        err.textContent = 'Failed to load tasks: ' + (e?.message || e);
         tasksListEl.appendChild(err);
       }
     }
@@ -363,8 +375,15 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || ('Request failed ' + res.status));
+      const bodyText = await res.text().catch(() => '');
+      let data = {};
+      if (bodyText) {
+        try { data = JSON.parse(bodyText); } catch { data = {}; }
+      }
+      if (!res.ok) {
+        const msg = data?.error || data?.detail || bodyText || ('Request failed ' + res.status);
+        throw new Error(msg);
+      }
       return data;
     }
 

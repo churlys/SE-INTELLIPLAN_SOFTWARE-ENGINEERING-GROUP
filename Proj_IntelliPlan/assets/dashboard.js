@@ -308,7 +308,19 @@ function formatHm12(hh, mm) {
 
 async function fetchJson(url) {
   const res = await fetch(url, { credentials: 'same-origin' });
-  if (!res.ok) throw new Error('Network error ' + res.status);
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => '');
+    let msg = 'Request failed (' + res.status + ')';
+    if (bodyText) {
+      try {
+        const j = JSON.parse(bodyText);
+        msg = j?.error || j?.detail || msg;
+      } catch {
+        msg = bodyText;
+      }
+    }
+    throw new Error(msg);
+  }
   return await res.json();
 }
 
@@ -1124,7 +1136,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function fetchTasks(){
       const res = await fetch('lib/api/tasks.php', { credentials: 'same-origin' });
-      if (!res.ok) throw new Error('Network error ' + res.status);
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => '');
+        let msg = 'Request failed (' + res.status + ')';
+        if (bodyText) {
+          try {
+            const j = JSON.parse(bodyText);
+            msg = j?.error || j?.detail || msg;
+          } catch {
+            msg = bodyText;
+          }
+        }
+        throw new Error(msg);
+      }
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     }
