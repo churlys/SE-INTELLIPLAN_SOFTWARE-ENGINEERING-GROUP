@@ -1,4 +1,4 @@
-// assets/calendar.js
+
 // Lightweight week/month calendar renderer; no external deps.
 (function(){
   // Optional clock placeholders if present
@@ -331,7 +331,7 @@
       }, ms);
     }
 
-    // Keep "today" highlight and task/event list fresh in real time.
+    
     lastTodayIso = formatDate(new Date());
     scheduleMidnightRefresh();
     document.addEventListener('visibilitychange', () => {
@@ -339,7 +339,7 @@
     });
     window.addEventListener('focus', rerenderIfDayChanged);
 
-    // Periodic refresh so newly added tasks/events appear without reload.
+   
     refreshTimerId = setInterval(() => {
       lastFetchKey = '';
       rerenderIfDayChanged();

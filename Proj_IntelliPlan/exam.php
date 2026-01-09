@@ -73,9 +73,16 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <span class="tasks-title-icon" aria-hidden="true">📝</span>
             <h2>Exams</h2>
           </div>
+          <button type="button" class="tasks-add-btn" id="openAddExam">Add Exam</button>
         </div>
 
-        <div class="tasks-add">
+        <div class="tasks-tabs" role="tablist" aria-label="Exam filter">
+          <button type="button" class="tasks-tab active" data-view="current" role="tab" aria-selected="true">Current</button>
+          <button type="button" class="tasks-tab" data-view="past" role="tab" aria-selected="false">Completed</button>
+          <button type="button" class="tasks-tab" data-view="overdue" role="tab" aria-selected="false">Overdue</button>
+        </div>
+
+        <div id="addExamPanel" class="tasks-add" hidden>
           <form id="addExamForm" class="tasks-add-form" autocomplete="off">
             <div class="tasks-add-grid">
               <label class="tasks-field">
@@ -115,12 +122,14 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
               </label>
             </div>
             <div class="tasks-add-actions">
+              <button type="button" class="tasks-btn" id="cancelAddExam">Cancel</button>
               <button type="submit" class="tasks-btn tasks-btn-primary">Save</button>
             </div>
             <div id="addExamError" class="tasks-error" hidden></div>
           </form>
         </div>
 
+        <div class="tasks-section-label" id="examsSectionLabel">Upcoming (0)</div>
         <div class="panel">
           <div id="examsList" class="panel-body muted">Loading exams…</div>
         </div>
@@ -138,8 +147,13 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
   <script>
     (function(){
       const listEl = document.getElementById('examsList');
+      const sectionLabelEl = document.getElementById('examsSectionLabel');
       const form = document.getElementById('addExamForm');
       if (!listEl || !form) return;
+
+      const openAddExamBtn = document.getElementById('openAddExam');
+      const addExamPanel = document.getElementById('addExamPanel');
+      const cancelAddExamBtn = document.getElementById('cancelAddExam');
 
       const titleEl = document.getElementById('examTitle');
       const subjectEl = document.getElementById('examSubject');
@@ -148,6 +162,20 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       const locationEl = document.getElementById('examLocation');
       const notesEl = document.getElementById('examNotes');
       const errEl = document.getElementById('addExamError');
+
+      // Add exam panel
+      openAddExamBtn?.addEventListener('click', () => {
+        if (!addExamPanel) return;
+        addExamPanel.hidden = !addExamPanel.hidden;
+        if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+        if (!addExamPanel.hidden) titleEl?.focus();
+      });
+      cancelAddExamBtn?.addEventListener('click', () => {
+        if (!addExamPanel) return;
+        addExamPanel.hidden = true;
+        if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+        form.reset();
+      });
 
       function escapeHtml(s){
         return (s + '')
@@ -166,6 +194,14 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         const ampm = h >= 12 ? 'PM' : 'AM';
         const displayHour = (h % 12) || 12;
         return `${displayHour}:${String(m).padStart(2,'0')} ${ampm}`;
+      }
+
+      function isoToday(){
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        return `${yyyy}-${mm}-${dd}`;
       }
 
       async function fetchExams(){
@@ -187,7 +223,53 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         return Array.isArray(data) ? data : [];
       }
 
-      function render(exams){
+      async function updateExam(payload){
+        const res = await fetch('lib/api/exams.php', {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || ('Request failed (' + res.status + ')'));
+        return data;
+      }
+
+      async function deleteExam(id){
+        const res = await fetch('lib/api/exams.php', {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || ('Request failed (' + res.status + ')'));
+        return data;
+      }
+
+      let allExams = [];
+      let currentView = 'current';
+
+      function filteredExams(){
+        const today = isoToday();
+        const now = new Date();
+        const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        return (allExams || []).filter(x => {
+          const status = String(x?.status || 'scheduled').toLowerCase();
+          const d = String(x?.exam_date || '').trim();
+          const examTimeRaw = String(x?.exam_time || '').trim();
+          const examTime = examTimeRaw ? (examTimeRaw.length === 5 ? (examTimeRaw + ':00') : examTimeRaw) : '';
+          const isOverdueByTime = !!d && d === today && !!examTime && examTime < nowTime;
+
+          if (currentView === 'past') return status === 'done';
+          if (currentView === 'overdue') return status !== 'done' && ((!!d && d < today) || isOverdueByTime);
+          // current
+          return status !== 'done' && (!d || d > today || (d === today && (!examTime || !isOverdueByTime)));
+        });
+      }
+
+      function render(){
+        const exams = filteredExams();
         const sorted = (exams || []).slice().sort((a,b) => {
           const ad = String(a?.exam_date || '');
           const bd = String(b?.exam_date || '');
@@ -198,6 +280,16 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           return (b?.id || 0) - (a?.id || 0);
         });
 
+        if (sectionLabelEl) {
+          if (currentView === 'past') {
+            sectionLabelEl.textContent = `Completed (${sorted.length}) — Auto-deletes after 24 hours`;
+          } else if (currentView === 'overdue') {
+            sectionLabelEl.textContent = `Overdue (${sorted.length}) — Auto-deletes after 24 hours`;
+          } else {
+            sectionLabelEl.textContent = `Upcoming (${sorted.length})`;
+          }
+        }
+
         if (sorted.length === 0) {
           listEl.classList.add('muted');
           listEl.textContent = 'No exams to display.';
@@ -207,19 +299,85 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
         listEl.classList.remove('muted');
         listEl.innerHTML = '';
         sorted.slice(0, 25).forEach(x => {
-          const row = document.createElement('div');
-          row.className = 'dash-task-item';
-          const meta = [];
-          if (x?.subject) meta.push(String(x.subject));
-          if (x?.exam_date) meta.push(String(x.exam_date));
-          if (x?.exam_time) meta.push(formatTimeAmerican(String(x.exam_time)));
-          if (x?.location) meta.push(String(x.location));
+          const card = document.createElement('div');
+          card.className = 'task-card';
 
-          row.innerHTML = `
-            <div class="dash-task-title">${escapeHtml(x?.title || 'Untitled')}</div>
-            ${meta.length ? `<div class="dash-task-meta">${escapeHtml(meta.join(' • '))}</div>` : ''}
-          `;
-          listEl.appendChild(row);
+          const left = document.createElement('div');
+          left.className = 'task-left';
+
+          const isDone = String(x?.status || 'scheduled').toLowerCase() === 'done';
+          const check = document.createElement('button');
+          check.type = 'button';
+          check.className = 'task-check' + (isDone ? ' done' : '');
+          check.setAttribute('aria-label', isDone ? 'Mark exam as not done' : 'Mark exam as done');
+          check.addEventListener('click', async () => {
+            try {
+              const nextStatus = isDone ? 'scheduled' : 'done';
+              await updateExam({
+                id: x.id,
+                title: x.title,
+                subject: x.subject ?? null,
+                exam_date: x.exam_date,
+                exam_time: x.exam_time ?? null,
+                location: x.location ?? null,
+                notes: x.notes ?? null,
+                status: nextStatus,
+              });
+              await refresh();
+            } catch (e) {
+              alert('Failed to update: ' + (e?.message || e));
+            }
+          });
+
+          const main = document.createElement('div');
+          main.className = 'task-main';
+          const title = document.createElement('div');
+          title.className = 'task-title';
+          title.textContent = x?.title || 'Untitled';
+
+          const meta = document.createElement('div');
+          meta.className = 'task-meta';
+          const parts = [];
+          if (x?.subject) parts.push(String(x.subject));
+          if (x?.exam_date) parts.push(String(x.exam_date));
+          if (x?.exam_time) parts.push(formatTimeAmerican(String(x.exam_time)));
+          if (x?.location) parts.push(String(x.location));
+          meta.textContent = parts.join(' • ');
+
+          main.appendChild(title);
+          if (parts.length) main.appendChild(meta);
+
+          left.appendChild(check);
+          left.appendChild(main);
+
+          const right = document.createElement('div');
+          right.className = 'task-right';
+          const showDelete = (currentView === 'overdue' || currentView === 'past');
+          if (showDelete) {
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'task-delete';
+            del.setAttribute('aria-label', 'Delete exam');
+            del.title = 'Delete exam';
+            del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
+            del.addEventListener('click', async () => {
+              const msg = currentView === 'overdue'
+                ? 'Delete this overdue exam? This cannot be undone.'
+                : 'Delete this completed exam? This cannot be undone.';
+              if (!confirm(msg)) return;
+              try {
+                await deleteExam(x.id);
+                await refresh();
+              } catch (e) {
+                alert('Failed to delete: ' + (e?.message || e));
+              }
+            });
+            right.appendChild(del);
+          }
+
+          card.appendChild(left);
+          card.appendChild(right);
+          listEl.appendChild(card);
         });
       }
 
@@ -228,12 +386,26 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           listEl.classList.add('muted');
           listEl.textContent = 'Loading exams…';
           const exams = await fetchExams();
-          render(exams);
+          allExams = Array.isArray(exams) ? exams : [];
+          render();
         } catch (e) {
           listEl.classList.add('muted');
           listEl.textContent = 'Failed to load exams.';
         }
       }
+
+      // Tabs
+      document.querySelectorAll('.tasks-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentView = btn.getAttribute('data-view') || 'current';
+          document.querySelectorAll('.tasks-tab').forEach(b => {
+            const active = b === btn;
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          render();
+        });
+      });
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -280,6 +452,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           }
 
           form.reset();
+          if (addExamPanel) addExamPanel.hidden = true;
           await refresh();
         } catch (err) {
           if (errEl) {

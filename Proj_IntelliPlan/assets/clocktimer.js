@@ -1,6 +1,6 @@
-// Clock + Pomodoro settings page logic (shared timer state with dashboard).
 
-// ===== Live Clock =====
+
+//  Live Clock 
 function formatTime(date) {
   let hours = date.getHours();
   const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -32,7 +32,7 @@ function startLiveClock() {
   setInterval(tick, 1000);
 }
 
-// ===== Shared Pomodoro State =====
+
 const POMODORO_STATE_KEY = 'intelliplan:pomodoroState';
 const INTELLIPLAN_LAST_USER_KEY = 'intelliplan:lastUserId';
 const POMODORO_SETTINGS = {

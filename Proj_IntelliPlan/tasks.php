@@ -190,21 +190,26 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
     function filteredTasks(){
       const subject = (subjectFilterEl?.value || '').trim();
       const today = isoToday();
+      const now = new Date();
+      const nowTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
       return allTasks.filter(t => {
         if (subject && String(t.subject || '').trim().toLowerCase() !== subject.toLowerCase()) return false;
 
         const status = (t.status || 'open').toLowerCase();
         const due = t.due_date || '';
+        const dueTimeRaw = String(t.due_time || '').trim();
+        const dueTime = dueTimeRaw ? (dueTimeRaw.length === 5 ? (dueTimeRaw + ':00') : dueTimeRaw) : '';
+        const isOverdueByTime = !!due && due === today && !!dueTime && dueTime < nowTime;
 
         if (currentView === 'past') {
           return status === 'done';
         }
         if (currentView === 'overdue') {
-          return status !== 'done' && !!due && due < today;
+          return status !== 'done' && ((!!due && due < today) || isOverdueByTime);
         }
         // current
-        return status !== 'done' && (!due || due >= today);
+        return status !== 'done' && (!due || due > today || (due === today && (!dueTime || !isOverdueByTime)));
       });
     }
 
@@ -242,7 +247,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
       if (currentView === 'past') {
         tasksSectionLabelEl.textContent = `Completed (${tasks.length}) — Auto-deletes after 24 hours`;
       } else if (currentView === 'overdue') {
-        tasksSectionLabelEl.textContent = `Overdue (${tasks.length})`;
+        tasksSectionLabelEl.textContent = `Overdue (${tasks.length}) — Auto-deletes after 24 hours`;
       } else {
         tasksSectionLabelEl.textContent = `This month (${thisMonthCount})`;
       }

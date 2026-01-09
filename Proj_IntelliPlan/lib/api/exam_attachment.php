@@ -1,5 +1,5 @@
 <?php
-// api/exam_attachment.php
+
 // Upload an attachment for an exam.
 
 declare(strict_types=1);

@@ -82,7 +82,11 @@ CREATE TABLE IF NOT EXISTS exams (
   notes TEXT DEFAULT NULL,
   file_id INT UNSIGNED DEFAULT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+  completed_at DATETIME DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX (user_id, exam_date),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+

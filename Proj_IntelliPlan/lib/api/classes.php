@@ -1,5 +1,5 @@
 <?php
-// api/classes.php
+
 // JSON API for classes (GET list, POST create, PUT update, DELETE).
 if (session_status() === PHP_SESSION_NONE) {
     $sessionDir = sys_get_temp_dir();
@@ -150,7 +150,7 @@ try {
             $starts_at = $dt->format('Y-m-d H:i:s');
           }
         } catch (Throwable $e) {
-          // ignore and fallback
+         
         }
       }
       if ($starts_at === null) {

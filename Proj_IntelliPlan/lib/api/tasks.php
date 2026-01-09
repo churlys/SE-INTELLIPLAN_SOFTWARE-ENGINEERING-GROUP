@@ -130,7 +130,23 @@ function cleanup_completed_tasks(PDO $pdo, int $userId): void {
   }
 }
 
+// Auto-delete overdue (not done) tasks after 24 hours past due.
+function cleanup_overdue_tasks(PDO $pdo, int $userId): void {
+  try {
+    // If due_date is date-only (or stored at midnight), comparing to NOW()-1 day can delete
+    // "yesterday" tasks too early. Use date-based cutoff so tasks remain visible in Overdue
+    // for at least a full day.
+    $stmt = $pdo->prepare(
+      "DELETE FROM tasks WHERE user_id = ? AND status <> 'done' AND due_date IS NOT NULL AND DATE(due_date) < (CURDATE() - INTERVAL 1 DAY)"
+    );
+    $stmt->execute([$userId]);
+  } catch (Throwable $e) {
+    // Best-effort; don't break API calls if cleanup fails.
+  }
+}
+
 cleanup_completed_tasks($pdo, (int)$user['id']);
+cleanup_overdue_tasks($pdo, (int)$user['id']);
 
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST ?? [];
@@ -159,10 +175,10 @@ try {
       $where[] = "t.status = 'done'";
     } elseif ($view === 'overdue') {
       $where[] = "t.status <> 'done'";
-      $where[] = 't.due_date IS NOT NULL AND DATE(t.due_date) < CURDATE()';
+      $where[] = '(t.due_date IS NOT NULL AND (DATE(t.due_date) < CURDATE() OR (DATE(t.due_date) = CURDATE() AND t.due_time IS NOT NULL AND t.due_time < CURTIME())))';
     } elseif ($view === 'current') {
       $where[] = "t.status <> 'done'";
-      $where[] = '(t.due_date IS NULL OR DATE(t.due_date) >= CURDATE())';
+      $where[] = '(t.due_date IS NULL OR DATE(t.due_date) > CURDATE() OR (DATE(t.due_date) = CURDATE() AND (t.due_time IS NULL OR t.due_time >= CURTIME())))';
     }
 
     // Order without relying on created_at (older schemas may not have it).

@@ -56,6 +56,7 @@ function ensure_exams_schema(PDO $pdo): void {
       "  notes TEXT NULL,\n" .
       "  file_id INT UNSIGNED NULL,\n" .
       "  status VARCHAR(20) NOT NULL DEFAULT 'scheduled',\n" .
+      "  completed_at DATETIME NULL,\n" .
       "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
       "  PRIMARY KEY (id),\n" .
       "  KEY idx_exams_user_date (user_id, exam_date)\n" .
@@ -80,6 +81,7 @@ function ensure_exams_schema(PDO $pdo): void {
     if (!isset($existing['notes'])) $alter[] = "ADD COLUMN notes TEXT NULL";
     if (!isset($existing['file_id'])) $alter[] = "ADD COLUMN file_id INT UNSIGNED NULL";
     if (!isset($existing['status'])) $alter[] = "ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'scheduled'";
+    if (!isset($existing['completed_at'])) $alter[] = "ADD COLUMN completed_at DATETIME NULL";
     if (!isset($existing['created_at'])) $alter[] = "ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP";
     if ($alter) {
       $pdo->exec('ALTER TABLE exams ' . implode(', ', $alter));
@@ -112,6 +114,37 @@ function ensure_files_schema(PDO $pdo): void {
 ensure_exams_schema($pdo);
 ensure_files_schema($pdo);
 
+// Auto-delete completed exams after 24 hours (mirrors tasks cleanup behavior).
+function cleanup_completed_exams(PDO $pdo, int $userId): void {
+  try {
+    // Backfill missing completed_at for existing done exams so they get a 24h grace window.
+    $stmt = $pdo->prepare("UPDATE exams SET completed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'done' AND completed_at IS NULL");
+    $stmt->execute([$userId]);
+
+    $stmt = $pdo->prepare("DELETE FROM exams WHERE user_id = ? AND status = 'done' AND completed_at < (NOW() - INTERVAL 1 DAY)");
+    $stmt->execute([$userId]);
+  } catch (Throwable $e) {
+    // Best-effort.
+  }
+}
+
+cleanup_completed_exams($pdo, (int)$user['id']);
+
+// Auto-delete overdue (not done) exams after 24 hours past exam date.
+function cleanup_overdue_exams(PDO $pdo, int $userId): void {
+  try {
+    // exam_date is a DATE; compare against NOW()-1 day by casting to DATE.
+    $stmt = $pdo->prepare(
+      "DELETE FROM exams WHERE user_id = ? AND status <> 'done' AND exam_date IS NOT NULL AND exam_date < DATE(NOW() - INTERVAL 1 DAY)"
+    );
+    $stmt->execute([$userId]);
+  } catch (Throwable $e) {
+    // Best-effort.
+  }
+}
+
+cleanup_overdue_exams($pdo, (int)$user['id']);
+
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?? $_POST ?? [];
 
@@ -134,7 +167,7 @@ try {
       $params[] = $end;
     }
 
-    $sql = 'SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.file_id, f.original_name AS file_name ' .
+    $sql = 'SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.completed_at, e.file_id, f.original_name AS file_name ' .
       'FROM exams e ' .
       'LEFT JOIN files f ON f.id = e.file_id AND f.user_id = e.user_id ' .
       'WHERE ' . implode(' AND ', $where) . ' ORDER BY e.exam_date ASC, e.exam_time ASC, e.id DESC';
@@ -176,7 +209,7 @@ try {
     ]);
     $id = (int)$pdo->lastInsertId();
 
-    $stmt = $pdo->prepare('SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.file_id, f.original_name AS file_name FROM exams e LEFT JOIN files f ON f.id = e.file_id AND f.user_id = e.user_id WHERE e.id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.completed_at, e.file_id, f.original_name AS file_name FROM exams e LEFT JOIN files f ON f.id = e.file_id AND f.user_id = e.user_id WHERE e.id = ? LIMIT 1');
     $stmt->execute([$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $fid = (int)($row['file_id'] ?? 0);
@@ -190,9 +223,10 @@ try {
     $id = (int)($input['id'] ?? 0);
     if (!$id) { http_response_code(400); echo json_encode(['error' => 'Missing id']); exit; }
 
-    $stmt = $pdo->prepare('SELECT id FROM exams WHERE id = ? AND user_id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, status FROM exams WHERE id = ? AND user_id = ? LIMIT 1');
     $stmt->execute([$id, $user['id']]);
-    if (!$stmt->fetch()) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
 
     $title = trim((string)($input['title'] ?? ''));
     $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
@@ -208,7 +242,16 @@ try {
       exit;
     }
 
-    $stmt = $pdo->prepare('UPDATE exams SET title = ?, subject = ?, exam_date = ?, exam_time = ?, location = ?, notes = ?, status = ? WHERE id = ? AND user_id = ?');
+    $prevStatus = strtolower((string)($existing['status'] ?? 'scheduled'));
+    $nextStatus = strtolower((string)($status !== '' ? $status : 'scheduled'));
+    $setCompletionSql = '';
+    if ($nextStatus === 'done' && $prevStatus !== 'done') {
+      $setCompletionSql = ', completed_at = CURRENT_TIMESTAMP';
+    } elseif ($nextStatus !== 'done' && $prevStatus === 'done') {
+      $setCompletionSql = ', completed_at = NULL';
+    }
+
+    $stmt = $pdo->prepare('UPDATE exams SET title = ?, subject = ?, exam_date = ?, exam_time = ?, location = ?, notes = ?, status = ?' . $setCompletionSql . ' WHERE id = ? AND user_id = ?');
     $stmt->execute([
       $title,
       ($subject !== '' ? $subject : null),
@@ -221,7 +264,7 @@ try {
       $user['id']
     ]);
 
-    $stmt = $pdo->prepare('SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.file_id, f.original_name AS file_name FROM exams e LEFT JOIN files f ON f.id = e.file_id AND f.user_id = e.user_id WHERE e.id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT e.id, e.title, e.subject, e.exam_date, e.exam_time, e.location, e.notes, e.status, e.completed_at, e.file_id, f.original_name AS file_name FROM exams e LEFT JOIN files f ON f.id = e.file_id AND f.user_id = e.user_id WHERE e.id = ? LIMIT 1');
     $stmt->execute([$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     $fid = (int)($row['file_id'] ?? 0);
