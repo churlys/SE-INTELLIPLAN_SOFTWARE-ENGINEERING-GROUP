@@ -92,7 +92,7 @@ $csrf = csrf_token();
                   <a class="forgot" href="#" title="Forgot password" style="float:right; font-size:13px;">forgot password</a>
                 </span>
                 <div class="pw-field">
-                  <input name="password" id="login-password" type="password" placeholder="●●●●●●●●" required>
+                  <input name="password" id="login-password" type="password" placeholder="Password" required>
                   <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePassword('login-password', this)">
                     <svg class="pw-icon pw-icon-hidden" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M2 12C4.5 7 8.2 4.5 12 4.5S19.5 7 22 12c-2.5 5-6.2 7.5-10 7.5S4.5 17 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
