@@ -394,6 +394,27 @@ async function refreshDashboardWeekIndicators() {
   });
 }
 
+async function refreshDashboardMonthIndicators() {
+  const monthEl = document.getElementById('dashCalendarMonth');
+  if (!monthEl || monthEl.hidden) return;
+  const dayButtons = Array.from(monthEl.querySelectorAll('button.monthday'));
+  if (dayButtons.length === 0) return;
+
+  const classes = await getDashboardClassesCached();
+  dayButtons.forEach((btn) => {
+    ensureWeekdayDot(btn);
+    const iso = btn.dataset.date;
+    if (!iso) {
+      btn.classList.remove('has-items');
+      return;
+    }
+    const d = new Date(iso + 'T00:00:00');
+    const dayAbbrev = Number.isNaN(d.getTime()) ? null : dayAbbrevForDate(d);
+    const hasClass = classes.some((c) => classMatchesIsoDate(c, iso, dayAbbrev));
+    btn.classList.toggle('has-items', !!hasClass);
+  });
+}
+
 // Day schedule (reminders)
 let dashboardScheduleRequestId = 0;
 const DASH_SCHEDULE_START_HOUR = 1;  // 1 AM
@@ -720,6 +741,9 @@ function renderDashboardMonthCalendar() {
 
   monthEl.innerHTML = '';
   monthEl.appendChild(frag);
+
+  // Add dots for class days.
+  refreshDashboardMonthIndicators();
 
   renderDashboardSelectedDayChip();
 }

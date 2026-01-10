@@ -88,7 +88,16 @@ $csrf = csrf_token();
                 <span class="label-text">Password</span>
                 <div class="pw-field">
                   <input name="password" id="password" type="password" placeholder="Enter your password" required>
-                  <button type="button" class="pw-toggle" aria-label="Show password" onclick="togglePassword('password', this)">👁️</button>
+                  <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePassword('password', this)">
+                    <svg class="pw-icon pw-icon-hidden" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2 12C4.5 7 8.2 4.5 12 4.5S19.5 7 22 12c-2.5 5-6.2 7.5-10 7.5S4.5 17 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M4 20 20 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <svg class="pw-icon pw-icon-visible" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2 12C4.5 7 8.2 4.5 12 4.5S19.5 7 22 12c-2.5 5-6.2 7.5-10 7.5S4.5 17 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                  </button>
                 </div>
               </label>
 
@@ -96,7 +105,16 @@ $csrf = csrf_token();
                 <span class="label-text">Confirm Password</span>
                 <div class="pw-field">
                   <input name="password2" id="password2" type="password" placeholder="Enter your password" required>
-                  <button type="button" class="pw-toggle" aria-label="Show password" onclick="togglePassword('password2', this)">👁️</button>
+                  <button type="button" class="pw-toggle" aria-label="Show password" aria-pressed="false" onclick="togglePassword('password2', this)">
+                    <svg class="pw-icon pw-icon-hidden" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2 12C4.5 7 8.2 4.5 12 4.5S19.5 7 22 12c-2.5 5-6.2 7.5-10 7.5S4.5 17 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M4 20 20 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <svg class="pw-icon pw-icon-visible" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2 12C4.5 7 8.2 4.5 12 4.5S19.5 7 22 12c-2.5 5-6.2 7.5-10 7.5S4.5 17 2 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                  </button>
                 </div>
               </label>
 
@@ -135,12 +153,14 @@ $csrf = csrf_token();
       if (!input) return;
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '👁️';
+        btn.classList.add('is-visible');
         btn.setAttribute('aria-pressed','true');
+        btn.setAttribute('aria-label','Hide password');
       } else {
         input.type = 'password';
-        btn.textContent = '👁️‍🗨️';
+        btn.classList.remove('is-visible');
         btn.setAttribute('aria-pressed','false');
+        btn.setAttribute('aria-label','Show password');
       }
     }
   </script>

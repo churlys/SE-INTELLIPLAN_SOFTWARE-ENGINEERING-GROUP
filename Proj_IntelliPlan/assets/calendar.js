@@ -90,6 +90,13 @@
       });
     }
 
+    async function fetchClasses(){
+      const res = await fetch('lib/api/classes.php?view=current', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Classes API error ' + res.status);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
     function normalizeEvents(raw){
       return raw.map(e => {
         const start = e?.start ? new Date(e.start) : null;
@@ -101,7 +108,7 @@
           end,
           allDay: !!(e?.allDay || e?.all_day),
           description: e?.description || '',
-          source: 'calendar',
+          source: e?.source || 'calendar',
         };
       }).filter(e => e.start instanceof Date && !isNaN(e.start));
     }
@@ -128,12 +135,111 @@
       }).filter(e => e.start instanceof Date && !isNaN(e.start));
     }
 
+    function dayAbbrevForDate(date){
+      const idx = date.getDay();
+      return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][idx] || null;
+    }
+
+    function parseTimeParts(timeStr){
+      if (!timeStr) return null;
+      const parts = String(timeStr).trim().split(':');
+      const hh = parseInt(parts[0] || '', 10);
+      const mm = parseInt(parts[1] || '0', 10);
+      if (!Number.isFinite(hh) || hh < 0 || hh > 23) return null;
+      if (!Number.isFinite(mm) || mm < 0 || mm > 59) return null;
+      return { hh, mm };
+    }
+
+    function dateWithTime(baseDate, timeStr){
+      const parts = parseTimeParts(timeStr);
+      if (!parts) return null;
+      const d = new Date(baseDate);
+      d.setHours(parts.hh, parts.mm, 0, 0);
+      return d;
+    }
+
+    function normalizeClassEvents(classes, rangeStart, rangeEnd){
+      const startDay = new Date(rangeStart);
+      startDay.setHours(0, 0, 0, 0);
+      const endDay = new Date(rangeEnd);
+      endDay.setHours(0, 0, 0, 0);
+
+      const out = [];
+      (classes || []).forEach(c => {
+        const status = String(c?.status || 'active').toLowerCase();
+        if (status === 'archived') return;
+
+        const title = String((c?.subject || c?.name || 'Class')).trim() || 'Class';
+        const daysRaw = String(c?.days || '').trim();
+        const days = daysRaw ? daysRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const hasDays = days.length > 0;
+
+        // If a specific datetime exists, treat as a one-off event.
+        if (c?.starts_at) {
+          const start = new Date(c.starts_at);
+          if (start instanceof Date && !isNaN(start)) {
+            if (start >= rangeStart && start <= rangeEnd) {
+              const end = c?.end_time ? dateWithTime(start, c.end_time) : null;
+              out.push({
+                id: `class:${c?.id ?? ''}:${start.toISOString()}`,
+                title,
+                start,
+                end: (end && end > start) ? end : null,
+                allDay: false,
+                description: '',
+                source: 'class',
+              });
+            }
+          }
+          // If both starts_at and days are provided, we still render the recurring schedule below.
+        }
+
+        if (!hasDays) return;
+
+        for (let d = new Date(startDay); d <= endDay; d.setDate(d.getDate() + 1)) {
+          const abbrev = dayAbbrevForDate(d);
+          if (!abbrev || !days.includes(abbrev)) continue;
+
+          const start = c?.start_time ? dateWithTime(d, c.start_time) : null;
+          if (!start) {
+            // No time info; show as all-day class on that weekday.
+            const allDayStart = new Date(d);
+            allDayStart.setHours(0, 0, 0, 0);
+            out.push({
+              id: `class:${c?.id ?? ''}:${formatDate(allDayStart)}:allday`,
+              title,
+              start: allDayStart,
+              end: null,
+              allDay: true,
+              description: '',
+              source: 'class',
+            });
+            continue;
+          }
+
+          const end = c?.end_time ? dateWithTime(d, c.end_time) : null;
+          out.push({
+            id: `class:${c?.id ?? ''}:${formatDate(d)}:${c?.start_time || ''}`,
+            title,
+            start,
+            end: (end && end > start) ? end : null,
+            allDay: false,
+            description: '',
+            source: 'class',
+          });
+        }
+      });
+
+      return out.filter(e => e.start instanceof Date && !isNaN(e.start));
+    }
+
     async function ensureEventsLoaded(rangeStart, rangeEnd){
       const key = `${formatDate(rangeStart)}..${formatDate(rangeEnd)}`;
       if (key === lastFetchKey) return;
       lastFetchKey = key;
       let calendarPart = [];
       let taskPart = [];
+      let classPart = [];
       try {
         const raw = await fetchEvents(rangeStart, rangeEnd);
         calendarPart = normalizeEvents(raw);
@@ -147,7 +253,14 @@
         taskPart = [];
       }
 
-      events = [...calendarPart, ...taskPart];
+      try {
+        const classes = await fetchClasses();
+        classPart = normalizeClassEvents(classes, rangeStart, rangeEnd);
+      } catch (err) {
+        classPart = [];
+      }
+
+      events = [...calendarPart, ...taskPart, ...classPart];
     }
 
     function eventsForIsoDay(iso){
