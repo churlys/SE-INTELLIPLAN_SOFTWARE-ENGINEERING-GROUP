@@ -94,25 +94,26 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
           <div class="ct-settings" id="pomodoroSettings" aria-label="Pomodoro settings">
             <div class="ct-field">
               <label class="ct-label" for="focusMinutes">Focus Time</label>
-              <select class="ct-select" id="focusMinutes">
-                <option value="1">1 Minute</option>
+              <input type="number" class="ct-select" id="focusMinutes" min="1" max="1440" placeholder="25">
+              <datalist id="focusOptions">
                 <option value="15">15 Minutes</option>
                 <option value="20">20 Minutes</option>
                 <option value="25">25 Minutes</option>
                 <option value="30">30 Minutes</option>
                 <option value="45">45 Minutes</option>
                 <option value="60">60 Minutes</option>
-              </select>
+              </datalist>
             </div>
 
             <div class="ct-field">
               <label class="ct-label" for="shortBreakMinutes">Short Break</label>
-              <select class="ct-select" id="shortBreakMinutes">
+              <input type="number" class="ct-select" id="shortBreakMinutes" min="1" max="1440" placeholder="5">
+              <datalist id="breakOptions">
                 <option value="3">3 Minutes</option>
                 <option value="5">5 Minutes</option>
                 <option value="10">10 Minutes</option>
                 <option value="15">15 Minutes</option>
-              </select>
+              </datalist>
             </div>
 
             <div class="ct-field ct-field-toggle">
