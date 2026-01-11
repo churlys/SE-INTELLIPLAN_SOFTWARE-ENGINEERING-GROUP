@@ -390,7 +390,13 @@
       const monthEnd = new Date(year, month, daysInMonth);
       monthEnd.setHours(23, 59, 59, 999);
 
-      monthView.innerHTML = '<div class="month-grid"></div>';
+      const monthWeekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      monthView.innerHTML = `
+        <div class="month-weekdays" aria-hidden="true">
+          ${monthWeekdays.map(d => `<div class="month-weekday">${d}</div>`).join('')}
+        </div>
+        <div class="month-grid"></div>
+      `;
       await ensureEventsLoaded(monthStart, monthEnd);
 
       const cells = [];
@@ -408,7 +414,11 @@
         });
       }
 
-      monthView.innerHTML = `<div class="month-grid">${cells.map(cell => {
+      monthView.innerHTML = `
+        <div class="month-weekdays" aria-hidden="true">
+          ${monthWeekdays.map(d => `<div class="month-weekday">${d}</div>`).join('')}
+        </div>
+        <div class="month-grid">${cells.map(cell => {
         if (cell.empty) return '<div class="month-cell" aria-hidden="true"></div>';
         const eventsHtml = cell.events.map(ev => {
           const dotCls = ev.source === 'task' ? 'event-dot task' : ev.source === 'exam' ? 'event-dot exam' : 'event-dot';
