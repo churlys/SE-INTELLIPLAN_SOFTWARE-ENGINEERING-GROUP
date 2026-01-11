@@ -184,6 +184,26 @@ body{
   border-color: #c7d2fe;
 }
 
+/* Exams shown in weekday header */
+.day-exams {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.exam-chip {
+  background: #fff7ed;
+  border: 1px solid #ffd8a8;
+  color: #78350f;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
 .week-events {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -273,6 +293,16 @@ body{
 .month-cell .event-dot.task {
   background: #06b6d4;
 }
+
+.month-cell .event-dot.exam {
+  background: #f97316;
+}
+
+.event-line.exam {
+  color: #78350f;
+}
+
+.event-dot.exam + span { color: #78350f; }
 
 .month-cell .event-line {
   font-size: 12px;
