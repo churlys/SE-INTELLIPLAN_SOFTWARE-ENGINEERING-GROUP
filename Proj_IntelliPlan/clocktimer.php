@@ -95,7 +95,7 @@ $isActivitiesPage = in_array($currentPage, $activitiesPages, true);
             <div class="ct-field">
               <label class="ct-label" for="focusMinutes">Focus Time</label>
               <select class="ct-select" id="focusMinutes">
-
+                <option value="1">1 Minute</option>
                 <option value="15">15 Minutes</option>
                 <option value="20">20 Minutes</option>
                 <option value="25">25 Minutes</option>
