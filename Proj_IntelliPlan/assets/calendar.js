@@ -97,6 +97,18 @@
       return Array.isArray(data) ? data : [];
     }
 
+    async function fetchExams(rangeStart, rangeEnd){
+      // exams API expects date or start/end as YYYY-MM-DD
+      const qs = new URLSearchParams({
+        start: formatDate(rangeStart),
+        end: formatDate(rangeEnd),
+      });
+      const res = await fetch(`lib/api/exams.php?${qs.toString()}`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Exams API error ' + res.status);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
     function normalizeEvents(raw){
       return raw.map(e => {
         const start = e?.start ? new Date(e.start) : null;
@@ -131,6 +143,25 @@
           description: subject,
           source: 'task',
           dueTime: dueTime || null,
+        };
+      }).filter(e => e.start instanceof Date && !isNaN(e.start));
+    }
+
+    function normalizeExamEvents(exams){
+      return (exams || []).map(x => {
+        const date = (x?.exam_date || '').trim();
+        const time = (x?.exam_time || '').trim();
+        const start = date ? new Date(date + 'T' + (time ? (time.length === 5 ? (time + ':00') : time) : '00:00:00')) : null;
+        const title = (x?.title || 'Exam').trim();
+        const desc = (x?.subject || x?.notes || '').trim();
+        return {
+          id: `exam:${x?.id ?? ''}`,
+          title,
+          start,
+          end: null,
+          allDay: !time,
+          description: desc,
+          source: 'exam',
         };
       }).filter(e => e.start instanceof Date && !isNaN(e.start));
     }
@@ -260,7 +291,15 @@
         classPart = [];
       }
 
-      events = [...calendarPart, ...taskPart, ...classPart];
+      let examPart = [];
+      try {
+        const exams = await fetchExams(rangeStart, rangeEnd);
+        examPart = normalizeExamEvents(exams);
+      } catch (err) {
+        examPart = [];
+      }
+
+      events = [...calendarPart, ...taskPart, ...classPart, ...examPart];
     }
 
     function eventsForIsoDay(iso){
@@ -308,12 +347,16 @@
         });
       }
 
-      const dayHeaderHtml = `<div class="week-days">${days.map(d => `
+      const dayHeaderHtml = `<div class="week-days">${days.map(d => {
+        const dayExams = eventsForIsoDay(d.iso).filter(ev => ev.source === 'exam');
+        const examsHtml = dayExams.length ? `<div class="day-exams">${dayExams.map(e => `<div class=\"exam-chip\">${escapeHtml(e.title)}</div>`).join('')}</div>` : '';
+        return `
         <div class="week-day ${d.isToday ? 'today' : ''}">
           <div class="label">${d.label}</div>
           <div class="date">${d.date.getDate()}</div>
+          ${examsHtml}
         </div>
-      `).join('')}</div>`;
+      `}).join('')}</div>`;
 
       const dayEventsHtml = `<div class="week-events">${days.map(d => {
         const dayEvents = eventsForIsoDay(d.iso);
@@ -368,9 +411,10 @@
       monthView.innerHTML = `<div class="month-grid">${cells.map(cell => {
         if (cell.empty) return '<div class="month-cell" aria-hidden="true"></div>';
         const eventsHtml = cell.events.map(ev => {
-          const dotCls = ev.source === 'task' ? 'event-dot task' : 'event-dot';
-          const lineCls = ev.source === 'task' ? 'event-line task' : 'event-line';
-          return `<div class="${lineCls}"><span class="${dotCls}"></span><span>${escapeHtml(ev.title)}</span></div>`;
+          const dotCls = ev.source === 'task' ? 'event-dot task' : ev.source === 'exam' ? 'event-dot exam' : 'event-dot';
+          const lineCls = ev.source === 'task' ? 'event-line task' : ev.source === 'exam' ? 'event-line exam' : 'event-line';
+          const time = ev.allDay ? '' : ` <small>${escapeHtml(new Date(ev.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}))}</small>`;
+          return `<div class="${lineCls}"><span class="${dotCls}"></span><span>${escapeHtml(ev.title)}${time}</span></div>`;
         }).join('');
         return `<div class="month-cell ${cell.isToday ? 'today' : ''}"><div class="date">${cell.date}</div>${eventsHtml}</div>`;
       }).join('')}</div>`;
