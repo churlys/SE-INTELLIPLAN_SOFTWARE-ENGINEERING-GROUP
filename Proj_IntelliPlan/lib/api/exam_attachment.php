@@ -58,6 +58,23 @@ if (!isset($_FILES['file'])) {
 
 $pdo = db();
 
+function constraint_exists(PDO $pdo, string $table, string $constraintName): bool {
+    $stmt = $pdo->prepare(
+        'SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? LIMIT 1'
+    );
+    $stmt->execute([$table, $constraintName]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function add_fk_if_missing(PDO $pdo, string $table, string $constraintName, string $sql): void {
+    try {
+        if (constraint_exists($pdo, $table, $constraintName)) return;
+        $pdo->exec($sql);
+    } catch (Throwable $e) {
+        // Best-effort; ignore if cannot be applied.
+    }
+}
+
 function ensure_files_schema(PDO $pdo): void {
     try {
         $pdo->exec(
@@ -76,6 +93,13 @@ function ensure_files_schema(PDO $pdo): void {
     } catch (PDOException $e) {
         // Best-effort.
     }
+
+    add_fk_if_missing(
+        $pdo,
+        'files',
+        'fk_files_user_id',
+        'ALTER TABLE files ADD CONSTRAINT fk_files_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+    );
 }
 
 function ensure_exams_file_column(PDO $pdo): void {

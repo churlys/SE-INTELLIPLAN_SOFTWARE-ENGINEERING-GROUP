@@ -20,7 +20,6 @@ if (file_exists(__DIR__ . '/../auth.php')) {
   exit;
 }
 
-// API endpoints should return JSON errors (not HTML redirects).
 if (!function_exists('is_logged_in') || !function_exists('current_user')) {
   http_response_code(500);
   echo json_encode(['error' => 'Auth helpers missing.']);
@@ -39,6 +38,23 @@ if (!$user || empty($user['id'])) {
   exit;
 }
 $pdo = db();
+
+function constraint_exists(PDO $pdo, string $table, string $constraintName): bool {
+  $stmt = $pdo->prepare(
+    'SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? LIMIT 1'
+  );
+  $stmt->execute([$table, $constraintName]);
+  return (bool)$stmt->fetchColumn();
+}
+
+function add_fk_if_missing(PDO $pdo, string $table, string $constraintName, string $sql): void {
+  try {
+    if (constraint_exists($pdo, $table, $constraintName)) return;
+    $pdo->exec($sql);
+  } catch (Throwable $e) {
+    // Best-effort; ignore if cannot be applied (e.g., existing orphan rows).
+  }
+}
 
 // Create/upgrade table for local/dev setups (safe if already exists).
 function ensure_tasks_schema(PDO $pdo): void {
@@ -61,7 +77,8 @@ function ensure_tasks_schema(PDO $pdo): void {
       "  PRIMARY KEY (id),\n" .
       "  KEY idx_tasks_user (user_id),\n" .
       "  KEY idx_tasks_due (due_date),\n" .
-      "  KEY idx_tasks_due_time (due_time)\n" .
+      "  KEY idx_tasks_due_time (due_time),\n" .
+      "  KEY idx_tasks_file (file_id)\n" .
       ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
   } catch (PDOException $e) {
@@ -90,6 +107,19 @@ function ensure_tasks_schema(PDO $pdo): void {
   } catch (Throwable $e) {
     // Ignore schema drift errors in production.
   }
+
+  add_fk_if_missing(
+    $pdo,
+    'tasks',
+    'fk_tasks_user_id',
+    'ALTER TABLE tasks ADD CONSTRAINT fk_tasks_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
+  add_fk_if_missing(
+    $pdo,
+    'tasks',
+    'fk_tasks_file_id',
+    'ALTER TABLE tasks ADD CONSTRAINT fk_tasks_file_id FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL'
+  );
 }
 
 // Create/upgrade files table for attachments (safe if already exists).
@@ -111,6 +141,13 @@ function ensure_files_schema(PDO $pdo): void {
   } catch (PDOException $e) {
     // Best-effort; see note in ensure_tasks_schema.
   }
+
+  add_fk_if_missing(
+    $pdo,
+    'files',
+    'fk_files_user_id',
+    'ALTER TABLE files ADD CONSTRAINT fk_files_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
 }
 
 ensure_tasks_schema($pdo);

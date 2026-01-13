@@ -1,0 +1,15 @@
+# Sensitive / local config
+.env
+.env.*
+
+# User uploads (runtime data)
+uploads/
+
+# Logs
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

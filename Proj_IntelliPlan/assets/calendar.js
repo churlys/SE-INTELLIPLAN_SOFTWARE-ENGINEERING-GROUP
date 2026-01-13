@@ -348,13 +348,10 @@
       }
 
       const dayHeaderHtml = `<div class="week-days">${days.map(d => {
-        const dayExams = eventsForIsoDay(d.iso).filter(ev => ev.source === 'exam');
-        const examsHtml = dayExams.length ? `<div class="day-exams">${dayExams.map(e => `<div class=\"exam-chip\">${escapeHtml(e.title)}</div>`).join('')}</div>` : '';
         return `
         <div class="week-day ${d.isToday ? 'today' : ''}">
           <div class="label">${d.label}</div>
           <div class="date">${d.date.getDate()}</div>
-          ${examsHtml}
         </div>
       `}).join('')}</div>`;
 

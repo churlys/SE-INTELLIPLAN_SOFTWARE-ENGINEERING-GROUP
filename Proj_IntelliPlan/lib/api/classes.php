@@ -24,6 +24,94 @@ require_auth();
 $user = current_user();
 $pdo = db();
 
+function send_json(mixed $data, int $status = 200): void {
+  http_response_code($status);
+  echo json_encode($data);
+  exit;
+}
+
+function send_error(string $message, int $status = 400, array $extra = []): void {
+  send_json(array_merge(['error' => $message], $extra), $status);
+}
+
+function normalize_class_row(array $row): array {
+  // Normalize starts_at to an ISO 8601 UTC string if present.
+  if (!empty($row['starts_at'])) {
+    try {
+      $dt = new DateTime((string)$row['starts_at'], new DateTimeZone('UTC'));
+      $row['starts_at'] = $dt->format(DateTime::ATOM);
+    } catch (Throwable $e) {
+      // leave as-is
+    }
+  } else {
+    $row['starts_at'] = null;
+  }
+
+  foreach (['subject', 'time', 'start_time', 'end_time', 'timezone', 'days', 'professor', 'status'] as $k) {
+    if (!array_key_exists($k, $row)) $row[$k] = null;
+  }
+
+  return $row;
+}
+
+function parse_days(mixed $daysInput): ?string {
+  if ($daysInput === null) return null;
+  if (is_array($daysInput)) {
+    $days = implode(',', array_map(static fn($d) => trim((string)$d), $daysInput));
+  } else {
+    $days = trim((string)$daysInput);
+  }
+  return $days === '' ? null : $days;
+}
+
+function parse_starts_at(?string $time, ?string $timezone): ?string {
+  if ($time === null) return null;
+  $time = trim($time);
+  if ($time === '') return null;
+
+  // Only parse if it looks like an ISO-ish datetime (avoid parsing ranges like "10:00 - 11:00").
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $time)) {
+    return null;
+  }
+
+  if ($timezone) {
+    try {
+      $dt = DateTime::createFromFormat('Y-m-d\TH:i', $time, new DateTimeZone($timezone));
+      if ($dt !== false) {
+        $dt->setTimezone(new DateTimeZone('UTC'));
+        return $dt->format('Y-m-d H:i:s');
+      }
+    } catch (Throwable $e) {
+      // fall through
+    }
+  }
+
+  try {
+    $dt = new DateTime($time);
+    $dt->setTimezone(new DateTimeZone('UTC'));
+    return $dt->format('Y-m-d H:i:s');
+  } catch (Throwable $e) {
+    return null;
+  }
+}
+
+function constraint_exists(PDO $pdo, string $table, string $constraintName): bool {
+  $stmt = $pdo->prepare(
+    'SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? LIMIT 1'
+  );
+  $stmt->execute([$table, $constraintName]);
+  return (bool)$stmt->fetchColumn();
+}
+
+function add_fk_if_missing(PDO $pdo, string $table, string $constraintName, string $sql): void {
+  try {
+    if (constraint_exists($pdo, $table, $constraintName)) return;
+    $pdo->exec($sql);
+  } catch (Throwable $e) {
+    // Best-effort; ignore if cannot be applied (e.g., existing orphan rows).
+  }
+}
+
 // Create/upgrade table for local/dev setups (safe if already exists).
 function ensure_classes_schema(PDO $pdo): void {
   $pdo->exec(
@@ -32,14 +120,14 @@ function ensure_classes_schema(PDO $pdo): void {
     "  user_id INT UNSIGNED NOT NULL,\n" .
     "  name VARCHAR(255) NOT NULL,\n" .
     "  subject VARCHAR(100) NULL,\n" .
-     "  time VARCHAR(100) NULL,\n" .
-     "  start_time TIME NULL,\n" .
-     "  end_time TIME NULL,\n" .
-     "  starts_at DATETIME NULL,\n" .
-     "  timezone VARCHAR(100) NULL,\n" .
-     "  days VARCHAR(100) NULL,\n" .
-     "  professor VARCHAR(255) NULL,\n" .
-     "  status VARCHAR(20) NOT NULL DEFAULT 'active',\n" .
+    "  time VARCHAR(100) NULL,\n" .
+    "  start_time TIME NULL,\n" .
+    "  end_time TIME NULL,\n" .
+    "  starts_at DATETIME NULL,\n" .
+    "  timezone VARCHAR(100) NULL,\n" .
+    "  days VARCHAR(100) NULL,\n" .
+    "  professor VARCHAR(255) NULL,\n" .
+    "  status VARCHAR(20) NOT NULL DEFAULT 'active',\n" .
     "  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
     "  PRIMARY KEY (id),\n" .
     "  KEY idx_classes_user (user_id)\n" .
@@ -70,15 +158,30 @@ function ensure_classes_schema(PDO $pdo): void {
   } catch (Throwable $e) {
     // Ignore schema drift errors in production.
   }
+
+  add_fk_if_missing(
+    $pdo,
+    'classes',
+    'fk_classes_user_id',
+    'ALTER TABLE classes ADD CONSTRAINT fk_classes_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
 }
 
 ensure_classes_schema($pdo);
 
-$method = $_SERVER['REQUEST_METHOD'];
-$input = json_decode(file_get_contents('php://input'), true) ?? $_POST ?? [];
+$method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$inputRaw = file_get_contents('php://input');
+$jsonBody = json_decode($inputRaw ?: '', true);
+$input = is_array($jsonBody) ? $jsonBody : ($_POST ?? []);
+
+$effectiveMethod = $method;
+if ($method === 'POST' && isset($input['_method'])) {
+  $override = strtoupper(trim((string)$input['_method']));
+  if (in_array($override, ['PUT', 'DELETE'], true)) $effectiveMethod = $override;
+}
 
 try {
-  if ($method === 'GET') {
+  if ($effectiveMethod === 'GET') {
     // Optional filters: view=current|past|all and subject
     $view = strtolower(trim((string)($_GET['view'] ?? 'all')));
     $subject = trim((string)($_GET['subject'] ?? ''));
@@ -101,29 +204,11 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $classes = [];
-    foreach ($rows as $r) {
-      // Normalize starts_at to an ISO 8601 UTC string if present
-      if (!empty($r['starts_at'])) {
-        try {
-          $dt = new DateTime($r['starts_at'], new DateTimeZone('UTC'));
-          $r['starts_at'] = $dt->format(DateTime::ATOM);
-        } catch (Throwable $e) {
-          // leave as-is
-        }
-      } else {
-        $r['starts_at'] = null;
-      }
-      $r['subject'] = isset($r['subject']) ? $r['subject'] : null;
-      $r['days'] = isset($r['days']) ? $r['days'] : null;
-      $r['professor'] = isset($r['professor']) ? $r['professor'] : null;
-      $classes[] = $r;
-    }
-    echo json_encode($classes);
-    exit;
+    $classes = array_map('normalize_class_row', $rows);
+    send_json($classes);
   }
 
-  if ($method === 'POST') {
+  if ($effectiveMethod === 'POST') {
     $name = trim($input['name'] ?? '');
     $subject = isset($input['subject']) ? trim((string)$input['subject']) : null;
     $time = isset($input['time']) ? trim((string)$input['time']) : null;
@@ -133,37 +218,10 @@ try {
       $time = $start_time . ' - ' . $end_time;
     }
     $timezone = isset($input['timezone']) ? trim((string)$input['timezone']) : null;
-    $days = null;
-    if (isset($input['days'])) {
-      if (is_array($input['days'])) $days = implode(',', array_map('trim', $input['days']));
-      else $days = trim((string)$input['days']);
-      if ($days === '') $days = null;
-    }
+    $days = array_key_exists('days', $input) ? parse_days($input['days']) : null;
     $professor = isset($input['professor']) ? trim((string)$input['professor']) : null;
-    $starts_at = null;
-    if ($time) {
-      if ($timezone) {
-        try {
-          $dt = DateTime::createFromFormat('Y-m-d\TH:i', $time, new DateTimeZone($timezone));
-          if ($dt !== false) {
-            $dt->setTimezone(new DateTimeZone('UTC'));
-            $starts_at = $dt->format('Y-m-d H:i:s');
-          }
-        } catch (Throwable $e) {
-         
-        }
-      }
-      if ($starts_at === null) {
-        try {
-          $dt = new DateTime($time);
-          $dt->setTimezone(new DateTimeZone('UTC'));
-          $starts_at = $dt->format('Y-m-d H:i:s');
-        } catch (Throwable $e) {
-          $starts_at = null;
-        }
-      }
-    }
-    if ($name === '') { http_response_code(400); echo json_encode(['error' => 'Missing name']); exit; }
+    $starts_at = parse_starts_at($time, $timezone);
+    if ($name === '') send_error('Missing name', 400);
 
     $stmt = $pdo->prepare('INSERT INTO classes (user_id, name, subject, time, start_time, end_time, starts_at, timezone, days, professor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([$user['id'], $name, $subject, $time, $start_time, $end_time, $starts_at, $timezone, $days, $professor]);
@@ -172,50 +230,42 @@ try {
     $stmt = $pdo->prepare('SELECT id, name, subject, time, start_time, end_time, starts_at, timezone, days, professor, status FROM classes WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $class = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!empty($class['starts_at'])) {
-      try { $dt = new DateTime($class['starts_at'], new DateTimeZone('UTC')); $class['starts_at'] = $dt->format(DateTime::ATOM); } catch (Throwable $e) {}
-    } else {
-      $class['starts_at'] = null;
-    }
-    $class['subject'] = isset($class['subject']) ? $class['subject'] : null;
-    $class['days'] = isset($class['days']) ? $class['days'] : null;
-    $class['professor'] = isset($class['professor']) ? $class['professor'] : null;
-    echo json_encode($class);
-    exit;
+    send_json(normalize_class_row($class ?: []));
   }
 
-  if ($method === 'PUT' || ($method === 'POST' && isset($input['_method']) && strtoupper($input['_method']) === 'PUT')) {
+  if ($effectiveMethod === 'PUT') {
     $id = (int)($input['id'] ?? 0);
-    if (!$id) { http_response_code(400); echo json_encode(['error' => 'Missing id']); exit; }
+    if (!$id) send_error('Missing id', 400);
 
     // verify ownership
-    $stmt = $pdo->prepare('SELECT id FROM classes WHERE id = ? AND user_id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, name, subject, time, start_time, end_time, starts_at, timezone, days, professor, status FROM classes WHERE id = ? AND user_id = ? LIMIT 1');
     $stmt->execute([$id, $user['id']]);
-    if (!$stmt->fetch()) { http_response_code(403); echo json_encode(['error' => 'Not found']); exit; }
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) send_error('Not found', 404);
 
-    $name = trim($input['name'] ?? '');
-    $time = isset($input['time']) ? trim((string)$input['time']) : null;
-    $start_time = isset($input['start_time']) ? trim((string)$input['start_time']) : null;
-    $end_time = isset($input['end_time']) ? trim((string)$input['end_time']) : null;
-    if ($start_time && $end_time) { $time = $start_time . ' - ' . $end_time; }
-    $timezone = isset($input['timezone']) ? trim((string)$input['timezone']) : null;
-    $status = $input['status'] ?? 'active';
-    $days = null;
-    if (isset($input['days'])) { if (is_array($input['days'])) $days = implode(',', array_map('trim', $input['days'])); else $days = trim((string)$input['days']); if ($days === '') $days = null; }
-    $professor = isset($input['professor']) ? trim((string)$input['professor']) : null;
+    $name = array_key_exists('name', $input) ? trim((string)$input['name']) : (string)$existing['name'];
+    if ($name === '') $name = (string)$existing['name'];
 
-    $starts_at = null;
-    if ($time) {
-      if ($timezone) {
-        try {
-          $dt = DateTime::createFromFormat('Y-m-d\TH:i', $time, new DateTimeZone($timezone));
-          if ($dt !== false) { $dt->setTimezone(new DateTimeZone('UTC')); $starts_at = $dt->format('Y-m-d H:i:s'); }
-        } catch (Throwable $e) {}
-      }
-      if ($starts_at === null) {
-        try { $dt = new DateTime($time); $dt->setTimezone(new DateTimeZone('UTC')); $starts_at = $dt->format('Y-m-d H:i:s'); } catch (Throwable $e) { $starts_at = null; }
-      }
-    }
+    $subject = array_key_exists('subject', $input) ? trim((string)$input['subject']) : (string)($existing['subject'] ?? '');
+    if ($subject === '') $subject = null;
+
+    $time = array_key_exists('time', $input) ? trim((string)$input['time']) : ($existing['time'] ?? null);
+    $start_time = array_key_exists('start_time', $input) ? trim((string)$input['start_time']) : ($existing['start_time'] ?? null);
+    $end_time = array_key_exists('end_time', $input) ? trim((string)$input['end_time']) : ($existing['end_time'] ?? null);
+    if ($start_time && $end_time) $time = $start_time . ' - ' . $end_time;
+
+    $timezone = array_key_exists('timezone', $input) ? trim((string)$input['timezone']) : ($existing['timezone'] ?? null);
+
+    $status = array_key_exists('status', $input) ? (string)$input['status'] : (string)($existing['status'] ?? 'active');
+    $status = strtolower(trim($status));
+    if (!in_array($status, ['active', 'archived'], true)) $status = (string)($existing['status'] ?? 'active');
+
+    $days = array_key_exists('days', $input) ? parse_days($input['days']) : ($existing['days'] ?? null);
+    $professor = array_key_exists('professor', $input) ? trim((string)$input['professor']) : ($existing['professor'] ?? null);
+    if ($professor === '') $professor = null;
+
+    $starts_at = parse_starts_at(is_string($time) ? $time : null, is_string($timezone) ? $timezone : null);
+    if ($starts_at === null) $starts_at = $existing['starts_at'] ?? null;
 
     $stmt = $pdo->prepare('UPDATE classes SET name = ?, subject = ?, time = ?, start_time = ?, end_time = ?, starts_at = ?, timezone = ?, days = ?, professor = ?, status = ? WHERE id = ? AND user_id = ?');
     $stmt->execute([$name, $subject, $time, $start_time, $end_time, $starts_at, $timezone, $days, $professor, $status, $id, $user['id']]);
@@ -223,39 +273,22 @@ try {
     $stmt = $pdo->prepare('SELECT id, name, subject, time, start_time, end_time, starts_at, timezone, days, professor, status FROM classes WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $class = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!empty($class['starts_at'])) {
-      try { $dt = new DateTime($class['starts_at'], new DateTimeZone('UTC')); $class['starts_at'] = $dt->format(DateTime::ATOM); } catch (Throwable $e) {}
-    } else {
-      $class['starts_at'] = null;
-    }
-    $class['subject'] = isset($class['subject']) ? $class['subject'] : null;
-    $class['days'] = isset($class['days']) ? $class['days'] : null;
-    if (!empty($class['starts_at'])) {
-      try { $dt = new DateTime($class['starts_at'], new DateTimeZone('UTC')); $class['starts_at'] = $dt->format(DateTime::ATOM); } catch (Throwable $e) {}
-    } else {
-      $class['starts_at'] = null;
-    }
-    $class['days'] = isset($class['days']) ? $class['days'] : null;
-    $class['professor'] = isset($class['professor']) ? $class['professor'] : null;
-    echo json_encode($class);
-    exit;
+    send_json(normalize_class_row($class ?: []));
   }
 
-  if ($method === 'DELETE' || ($method === 'POST' && isset($input['_method']) && strtoupper($input['_method']) === 'DELETE')) {
+  if ($effectiveMethod === 'DELETE') {
     $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-    if (!$id) { http_response_code(400); echo json_encode(['error' => 'Missing id']); exit; }
+    if (!$id) send_error('Missing id', 400);
 
     $stmt = $pdo->prepare('DELETE FROM classes WHERE id = ? AND user_id = ?');
     $stmt->execute([$id, $user['id']]);
-    echo json_encode(['deleted' => $id]);
-    exit;
+    send_json(['deleted' => $id]);
   }
 
-  http_response_code(405);
-  echo json_encode(['error' => 'Method not allowed']);
-  exit;
+  send_error('Method not allowed', 405);
 } catch (PDOException $e) {
-  http_response_code(500);
-  echo json_encode(['error' => $e->getMessage()]);
-  exit;
+  $debug = getenv('INTELLIPLAN_DEBUG');
+  $payload = ['error' => 'Database error'];
+  if ($debug && $debug !== '0') $payload['detail'] = $e->getMessage();
+  send_json($payload, 500);
 }
