@@ -41,6 +41,23 @@ if (!$user || empty($user['id'])) {
 }
 $pdo = db();
 
+function constraint_exists(PDO $pdo, string $table, string $constraintName): bool {
+  $stmt = $pdo->prepare(
+    'SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? LIMIT 1'
+  );
+  $stmt->execute([$table, $constraintName]);
+  return (bool)$stmt->fetchColumn();
+}
+
+function add_fk_if_missing(PDO $pdo, string $table, string $constraintName, string $sql): void {
+  try {
+    if (constraint_exists($pdo, $table, $constraintName)) return;
+    $pdo->exec($sql);
+  } catch (Throwable $e) {
+    // Best-effort; ignore if cannot be applied (e.g., existing orphan rows).
+  }
+}
+
 function ensure_exams_schema(PDO $pdo): void {
   // Avoid DATETIME DEFAULT CURRENT_TIMESTAMP (not supported on some older MySQL setups).
   try {
@@ -59,7 +76,8 @@ function ensure_exams_schema(PDO $pdo): void {
       "  completed_at DATETIME NULL,\n" .
       "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
       "  PRIMARY KEY (id),\n" .
-      "  KEY idx_exams_user_date (user_id, exam_date)\n" .
+      "  KEY idx_exams_user_date (user_id, exam_date),\n" .
+      "  KEY idx_exams_file (file_id)\n" .
       ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     );
   } catch (PDOException $e) {
@@ -89,6 +107,19 @@ function ensure_exams_schema(PDO $pdo): void {
   } catch (Throwable $e) {
     // Ignore schema drift errors in production.
   }
+
+  add_fk_if_missing(
+    $pdo,
+    'exams',
+    'fk_exams_user_id',
+    'ALTER TABLE exams ADD CONSTRAINT fk_exams_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
+  add_fk_if_missing(
+    $pdo,
+    'exams',
+    'fk_exams_file_id',
+    'ALTER TABLE exams ADD CONSTRAINT fk_exams_file_id FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL'
+  );
 }
 
 function ensure_files_schema(PDO $pdo): void {
@@ -109,6 +140,13 @@ function ensure_files_schema(PDO $pdo): void {
   } catch (PDOException $e) {
     // Best-effort.
   }
+
+  add_fk_if_missing(
+    $pdo,
+    'files',
+    'fk_files_user_id',
+    'ALTER TABLE files ADD CONSTRAINT fk_files_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
 }
 
 ensure_exams_schema($pdo);

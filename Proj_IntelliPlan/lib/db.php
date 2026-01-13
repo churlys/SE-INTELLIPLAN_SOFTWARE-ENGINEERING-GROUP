@@ -42,15 +42,17 @@ function db(): PDO {
 
     $renderDbError = function (PDOException $e) use ($isApiRequest): void {
         http_response_code(500);
-        $msg = 'Database connection failed: ' . $e->getMessage();
+        $debug = getenv('INTELLIPLAN_DEBUG');
+        $showDetail = ($debug !== false && $debug !== null && $debug !== '' && $debug !== '0');
         if ($isApiRequest()) {
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'error' => 'Database connection failed',
-                'detail' => $e->getMessage(),
-            ]);
+            $payload = ['error' => 'Database connection failed'];
+            if ($showDetail) $payload['detail'] = $e->getMessage();
+            echo json_encode($payload);
         } else {
-            echo "Database connection failed: " . htmlspecialchars($e->getMessage());
+            echo $showDetail
+                ? ("Database connection failed: " . htmlspecialchars($e->getMessage()))
+                : "Database connection failed.";
         }
         exit;
     };

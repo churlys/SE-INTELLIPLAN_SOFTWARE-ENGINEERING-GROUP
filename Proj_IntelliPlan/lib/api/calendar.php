@@ -26,6 +26,54 @@ require_auth();
 $user = current_user();
 $pdo = db();
 
+function constraint_exists(PDO $pdo, string $table, string $constraintName): bool {
+  $stmt = $pdo->prepare(
+    'SELECT 1 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? LIMIT 1'
+  );
+  $stmt->execute([$table, $constraintName]);
+  return (bool)$stmt->fetchColumn();
+}
+
+function add_fk_if_missing(PDO $pdo, string $table, string $constraintName, string $sql): void {
+  try {
+    if (constraint_exists($pdo, $table, $constraintName)) return;
+    $pdo->exec($sql);
+  } catch (Throwable $e) {
+    // Best-effort; ignore if cannot be applied.
+  }
+}
+
+function ensure_calendar_schema(PDO $pdo): void {
+  try {
+    $pdo->exec(
+      "CREATE TABLE IF NOT EXISTS calendar_events (\n" .
+      "  id INT UNSIGNED NOT NULL AUTO_INCREMENT,\n" .
+      "  user_id INT UNSIGNED NOT NULL,\n" .
+      "  title VARCHAR(255) NOT NULL,\n" .
+      "  description TEXT NULL,\n" .
+      "  start DATETIME NOT NULL,\n" .
+      "  end DATETIME NULL,\n" .
+      "  all_day TINYINT(1) NOT NULL DEFAULT 0,\n" .
+      "  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n" .
+      "  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" .
+      "  PRIMARY KEY (id),\n" .
+      "  KEY idx_calendar_user (user_id)\n" .
+      ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    );
+  } catch (Throwable $e) {
+    // Best-effort.
+  }
+
+  add_fk_if_missing(
+    $pdo,
+    'calendar_events',
+    'fk_calendar_events_user_id',
+    'ALTER TABLE calendar_events ADD CONSTRAINT fk_calendar_events_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'
+  );
+}
+
+ensure_calendar_schema($pdo);
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Read input body for PUT/POST with JSON
