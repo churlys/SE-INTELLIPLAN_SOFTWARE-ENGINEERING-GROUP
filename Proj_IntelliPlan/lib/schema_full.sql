@@ -156,8 +156,9 @@ LEFT JOIN (
     SELECT user_id, 'task' AS item_type, title, due_date, status
     FROM tasks
     UNION ALL
-    SELECT user_id, 'exam', title, exam_date, status
+    SELECT user_id, 'exam', title, exam_date,  status
     FROM exams
 ) i ON u.id = i.user_id;
-
+select * from tasks;
+select * from exams;
 
